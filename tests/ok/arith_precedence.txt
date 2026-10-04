@@ -1,0 +1,4 @@
+// * binds tighter than + and -, and - is left-associative
+::|::::: a {1 + 2 * 3 - 4}
+::|::::: b {10 - 3 - 2}
+|||||||| a

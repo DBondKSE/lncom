@@ -1,0 +1,5 @@
+Program [1:1]
+  Decl x i32 const [4:1]
+    init: Int 1 [4:13]
+  Exit [7:1]
+    value: Var x [7:10]

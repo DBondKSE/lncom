@@ -1,0 +1,3 @@
+// an immutable i64 holding a value too big for i32
+:|:::::: big {5000000000}
+|||||||| big

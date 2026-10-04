@@ -1,0 +1,8 @@
+// leading comment
+
+   
+::|::::: x {1}   // trailing comment
+	// tab-indented comment line
+
+|||||||| x // exit comment
+// final comment

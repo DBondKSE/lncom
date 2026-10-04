@@ -1,0 +1,3 @@
+// an immutable i32
+::|::::: count {42}
+|||||||| count

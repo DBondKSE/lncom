@@ -1,0 +1,7 @@
+Program [1:1]
+  Decl max i64 const [2:1]
+    init: Int 9223372036854775807 [2:15]
+  Decl seven i64 const [3:1]
+    init: Int 007 [3:17]
+  Exit [4:1]
+    value: Var max [4:10]

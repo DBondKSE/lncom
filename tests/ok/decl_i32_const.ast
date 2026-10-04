@@ -1,0 +1,5 @@
+Program [1:1]
+  Decl count i32 const [2:1]
+    init: Int 42 [2:17]
+  Exit [3:1]
+    value: Var count [3:10]

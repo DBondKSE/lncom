@@ -1,0 +1,5 @@
+Program [1:1]
+  Decl big i64 const [2:1]
+    init: Int 5000000000 [2:15]
+  Exit [3:1]
+    value: Var big [3:10]
