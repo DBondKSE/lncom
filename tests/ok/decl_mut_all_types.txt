@@ -1,0 +1,5 @@
+// the top bit turns each type key into its mutable form
+|:|::::: a {1}
+||:::::: b {2}
+|:::::|: c {::::::::}
+|||||||| a

@@ -1,0 +1,7 @@
+Program [1:1]
+  Decl yes bool const [1:1]
+    init: Bool true [1:15]
+  Decl no bool const [2:1]
+    init: Bool false [2:14]
+  Exit [3:1]
+    value: Var yes [3:10]

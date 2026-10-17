@@ -1,0 +1,62 @@
+One Claude Code Opus 5.5 chat for whole assignment:
+---
+
+Read @w04-project-stage1.pdf 
+Based on work in @w01-practice help me design and implement my language.
+First, let's discuss the unique syntax required by the task - I'll propose an idea, you'll evaluate it and, if approved, refine for the next stage
+-> Claude summarized the stage requirements and the criteria for judging a syntax idea; nothing from this step went into the code.
+
+---
+
+I thought of something classic, but with a twist for keywords:
+the structure is the same as in practice repo, but each keyword has a number 0-255 attached to it - its key. 
+How it is used:
+: - 0,
+| - 1.
+:::::::: - a valid keyword, corresponding to 0 - e.g. "exit" keyword.
+This way, instead of writing words, you write in binary keys (only for words, :=, {}, () stay the same)
+So, is that amount of keys enough?
+Example:
+:|:::::: x {30}; // e.g. i64
+:::::::: x;
+-> Claude approved the idea and proposed memorable key values (false=0, true=1, bool=2, i32=32, i64=64, else as the bitwise inverse of if, exit=11111111), which I took as is.
+
+---
+
+Yeah, your definition makes sense. 
+As for := and : collision - switch := to =, I prefer this more and there is probably not much reason to keep it that way
+-> Changed by me: assignment became "=" instead of ":="
+
+---
+
+one more thing - it is really inefficient to use two 8-char blocks for type + mut. Could "mut" just mean a flipped 8-th bit? 
+Example: 
+:|:::::: - i64, 
+||:::::: - i64 mut
+Will this cause conflicts?
+-> My idea: Claude confirmed that the mutable codes 130, 160 and 192 collide with no other key and dropped the separate "mut" key, so a bare top bit is now an error.
+
+---
+
+I have already created an empty folder - lncom-language. Use C++, same as in practice. Now, write down EBNF for this language, along with some comments for it's rules and decisions
+-> Claude wrote grammar.ebnf with a comment on every rule and design decision, which I took as is.
+
+---
+
+Check src/ for errors / logical mistakes / deviations from EBNF, fix whatever you find
+-> Claude reviewed the lexer and parser against grammar.ebnf, and I kept the resulting code as is.
+
+---
+
+Do tasks 5-6 according to the pdf:
+cover the implementation with tests, write short README.md
+-> Claude wrote 21 valid and 30 invalid test programs with their expected outputs, the tests/run_tests.sh runner and README.md, which I took as is.
+
+--- 
+
+Is this bad?
+git add .
+warning: in the working copy of 'tests/err/crlf_line_endings.txt', CRLF will be replaced by LF the next time Git touches it
+-> Claude fixed the issue with git for one test that checks crlf
+
+---

@@ -1,0 +1,175 @@
+(* ======================================================================
+   lncom: the grammar of the language
+   ======================================================================
+
+   Every keyword is written as an 8-bit binary key:
+       ":"  is a 0 bit
+       "|"  is a 1 bit
+   The leftmost symbol is the most significant bit, so ":|::::::" is
+   01000000 = 64 = i64.
+
+   Operators, braces, parentheses, identifiers and numbers are written
+   as usual. A program is line-oriented: one statement per line, and a
+   block's braces stand on their own lines.
+
+   The grammar is in two parts:
+     1. lexical rules: how bytes form tokens (the lexer, a state machine)
+     2. syntax rules:  how tokens form a program (the recursive-descent
+                       parser, one function per rule)
+   ====================================================================== *)
+
+
+(* ----------------------------------------------------------------------
+   1. LEXICAL RULES
+   ---------------------------------------------------------------------- *)
+
+bit ::= ":" | "|"
+
+(* A key is exactly 8 bits. These are the only keys the language
+   accepts. Any other 8-bit sequence is a lexical error ("unknown key N"),
+   and so is a run of fewer than 8 or more than 8 bits.
+
+   A key ends after its 8th bit. The next byte must not be a bit, a letter
+   or a digit: "|||||||||" (9 bits) and "|:::::::x" are lexical errors.
+
+   The values are chosen so they are easy to remember:
+     false = 0 and true = 1
+     bool  = 2, because a bool has two values
+     i32   = 32 and i64 = 64, their bit widths
+     else  = 15 = 00001111, the bitwise inverse of if = 11110000
+     while = 170 = 10101010, alternating bits for a loop
+     exit  = 255 = 11111111, a solid wall at the end of the program *)
+
+FALSE    ::= "::::::::"        (*   0  00000000 *)
+TRUE     ::= ":::::::|"        (*   1  00000001 *)
+BOOL     ::= "::::::|:"        (*   2  00000010 *)
+ELSE     ::= "::::||||"        (*  15  00001111 *)
+I32      ::= "::|:::::"        (*  32  00100000 *)
+I64      ::= ":|::::::"        (*  64  01000000 *)
+BOOL_MUT ::= "|:::::|:"        (* 130  10000010 *)
+I32_MUT  ::= "|:|:::::"        (* 160  10100000 *)
+WHILE    ::= "|:|:|:|:"        (* 170  10101010 *)
+I64_MUT  ::= "||::::::"        (* 192  11000000 *)
+IF       ::= "||||::::"        (* 240  11110000 *)
+EXIT     ::= "||||||||"        (* 255  11111111 *)
+
+(* The mutability bit.
+   There is no separate "mut" keyword. A type key with its top bit
+   (value 128) set declares a mutable variable of that type:
+       i64      ":|::::::"   64
+       i64 mut  "||::::::"   64 + 128 = 192
+   The top bit alone, "|:::::::" (128), is not a key: it is a lexical
+   error ("mutable bit set without a type").
+
+   To keep this conflict-free, every type key is below 128, and
+   type + 128 is never used by another keyword. The other keys with the
+   top bit set are while (128 + 42), if (128 + 112) and exit (128 + 127),
+   and 42, 112 and 127 are not type keys. *)
+
+(* Identifiers are ASCII letters, digits and "_", and do not start with a
+   digit. ":" and "|" cannot appear in an identifier, so an identifier
+   never looks like a key. *)
+ident  ::= letter { letter | digit }
+letter ::= "a" .. "z" | "A" .. "Z" | "_"
+digit  ::= "0" .. "9"
+
+(* Integer literals are unsigned decimal. A letter directly after a
+   digit ("12ab") is a lexical error.
+
+   Type overflow rules:
+     1. A literal larger than 9223372036854775807 (the largest i64) is a
+        lexical error.
+     2. A literal that does not fit its target type is a compile error:
+        "::|::::: x {3000000000}" fails, as 3000000000 > 2147483647, the
+        largest i32. This depends on the declared type, so it is checked
+        in the semantic stage.
+     3. An i32 value widens to i64 automatically; an i64 never narrows
+        to i32, so assigning an i64 to an i32 is a type error.
+     4. If "+", "-" or "*" overflows its result type at run time, the
+        program stops with a runtime error instead of wrapping around.
+   Only rule 1 belongs to this stage's lexer; rules 2-4 are part of the
+   language and are enforced by the later stages. *)
+number ::= digit { digit }
+
+(* Assignment is "=" and comparison is "==". The lexer tells them apart
+   by looking at the byte after the first "=". *)
+ASSIGN ::= "="
+EQ     ::= "=="
+NE     ::= "!="
+NOT    ::= "!"
+PLUS   ::= "+"
+MINUS  ::= "-"
+STAR   ::= "*"
+
+(* A comment runs from "//" to the end of the line. A single "/" is a
+   lexical error: there is no division. *)
+comment ::= "//" { any byte except "\n" }
+
+(* Spaces, tabs and comments may appear between any two tokens and are
+   skipped. They separate tokens but never form one. *)
+whitespace ::= " " | "\t"
+
+(* A newline ends a statement. Everything up to the next token is
+   absorbed into the same NL: further line breaks, blank lines, lines
+   holding only spaces, and comment-only lines. So two statements are
+   always separated by exactly one NL token. *)
+NL ::= "\n" { "\n" | whitespace | comment }
+
+
+(* ----------------------------------------------------------------------
+   2. SYNTAX RULES
+   ---------------------------------------------------------------------- *)
+
+(* A program is a list of statements and must end with exit. Nothing may
+   follow the exit. The final newline is optional. *)
+program ::= [ NL ] { statement } exit_stmt [ NL ]
+
+(* Simple statements end with their own NL. if and while end with a
+   block, and a block already consumes the NL after its "}". *)
+statement ::= decl NL
+            | assign NL
+            | if
+            | while
+
+(* A declaration always has an initialiser in braces. The type key
+   decides both the type and the mutability. A variable declared with a
+   plain type key is a constant and cannot be assigned later (checked in
+   the semantic stage). *)
+decl     ::= ( type | mut_type ) ident "{" expr "}"
+type     ::= I32 | I64 | BOOL
+mut_type ::= I32_MUT | I64_MUT | BOOL_MUT
+
+assign ::= ident ASSIGN expr
+
+(* The condition is on the same line as the keyword. The block starts on
+   the next line. else stands alone on its own line between the two
+   blocks. *)
+if    ::= IF expr NL block [ ELSE NL block ]
+while ::= WHILE expr NL block
+
+(* "{" and "}" each stand alone on their own line. A block holds at
+   least one statement, so an empty block is a syntax error. A block may
+   end with exit, and nothing may follow that exit inside the block. *)
+block ::= "{" NL body "}" NL
+body  ::= statement { statement } [ exit_stmt NL ]
+        | exit_stmt NL
+
+(* exit takes a single factor: a literal, a variable, a negation or a
+   parenthesised expression. *)
+exit_stmt ::= EXIT factor
+
+(* Expressions, from lowest to highest precedence:
+     comparison   ==  !=    at most one per expression; not chained
+     additive     +   -     left-associative
+     product      *         left-associative
+     prefix       !         applies to one factor; it nests ("!!x")
+   Parentheses override precedence. *)
+expr   ::= arith [ ( EQ | NE ) arith ]
+arith  ::= term { ( PLUS | MINUS ) term }
+term   ::= factor { STAR factor }
+factor ::= number
+         | TRUE
+         | FALSE
+         | ident
+         | NOT factor
+         | "(" expr ")"

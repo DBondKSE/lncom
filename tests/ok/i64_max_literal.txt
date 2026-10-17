@@ -1,0 +1,4 @@
+// the largest i64 is still a valid literal, leading zeros are allowed
+:|:::::: max {9223372036854775807}
+:|:::::: seven {007}
+|||||||| max

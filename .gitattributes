@@ -1,0 +1,2 @@
+* text=auto eol=lf
+tests/err/crlf_line_endings.txt -text

@@ -1,0 +1,5 @@
+.DS_Store
+*.ll
+*.o
+*.pdf
+compiler
