@@ -1,0 +1,15 @@
+// a struct field of struct type, a nested {} and an assignment through a mut chain
+:::::||: Point
+{
+    |:|::::: x
+    |:|::::: y
+}
+:::::||: Circle
+{
+    |::::||: Point center
+    ::|::::: r
+}
+|::::||: Circle c {{1, 2}, 5}
+c.center.x = 10
+:||:::|: c
+|||||||| c.r

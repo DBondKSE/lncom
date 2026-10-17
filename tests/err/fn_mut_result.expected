@@ -1,0 +1,1 @@
+compilation error: line 1:15: a result type takes a plain type key, not '|:|:::::' (i32 mut)

@@ -1,0 +1,27 @@
+// a mutating member function called through a chain where every link is mut
+:::::||: Point
+{
+    |:|::::: x
+    |:|::::: y
+
+    :||::::: shift (::|::::: d) ::::::::
+    {
+        x = x + d
+        y = y + d
+    }
+}
+:::::||: Circle
+{
+    |::::||: Point center
+    ::|::::: r
+
+    :||::::: move (::|::::: d) ::::::::
+    {
+        center.shift(d)
+    }
+}
+|::::||: Circle c {{1, 2}, 5}
+c.center.shift(10)
+c.move(1)
+:||:::|: c
+|||||||| c.center.x

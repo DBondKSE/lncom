@@ -1,0 +1,17 @@
+// an object is copied into a parameter and out of a result
+:::::||: Point
+{
+    |:|::::: x
+    |:|::::: y
+}
+:||::::: moved (:::::||: Point p, ::|::::: dx) :::::||: Point
+{
+    |::::||: Point q {p}
+    q.x = q.x + dx
+    |||||||| q
+}
+:::::||: Point a {1, 2}
+:::::||: Point b {moved(a, 10)}
+:||:::|: a
+:||:::|: b
+|||||||| b.x

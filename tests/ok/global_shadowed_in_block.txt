@@ -1,0 +1,13 @@
+// a top-level block may shadow a global, functions still see the global
+:||::::: get () ::|:::::
+{
+    |||||||| g
+}
+::|::::: g {1}
+||||:::: :::::::|
+{
+    ::|::::: g {2}
+    :||:::|: g
+    :||:::|: get()
+}
+|||||||| g

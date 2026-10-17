@@ -1,0 +1,19 @@
+// a member function that assigns a field changes the caller's object
+:::::||: Counter
+{
+    |:|::::: n
+
+    :||::::: add (::|::::: k) ::::::::
+    {
+        n = n + k
+    }
+
+    :||::::: get () ::|:::::
+    {
+        |||||||| n
+    }
+}
+|::::||: Counter c {0}
+c.add(5)
+c.add(2)
+|||||||| c.get()

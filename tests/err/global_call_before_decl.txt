@@ -1,0 +1,7 @@
+:||::::: tick () ::::::::
+{
+    calls = calls + 1
+}
+tick()
+|:|::::: calls {0}
+|||||||| calls

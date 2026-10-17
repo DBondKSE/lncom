@@ -1,0 +1,8 @@
+// a call that returns a value may stand alone, its result is discarded
+:||::::: loud (::|::::: n) ::|:::::
+{
+    :||:::|: n
+    |||||||| (n * 2)
+}
+loud(4)
+|||||||| loud(1)
