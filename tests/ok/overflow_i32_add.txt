@@ -1,0 +1,6 @@
+// an i32 + that does not fit stops the program with a runtime error
+|:|::::: x {2147483600}
+:||:::|: x
+x = x + 100
+:||:::|: x
+|||||||| x

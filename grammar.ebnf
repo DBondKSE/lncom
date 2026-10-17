@@ -8,14 +8,16 @@
    The leftmost symbol is the most significant bit, so ":|::::::" is
    01000000 = 64 = i64.
 
-   Operators, braces, parentheses, identifiers and numbers are written
-   as usual. A program is line-oriented: one statement per line, and a
-   block's braces stand on their own lines.
+   Operators, braces, parentheses, identifiers, numbers and strings are
+   written as usual. A program is line-oriented: one statement per line,
+   and a block's braces stand on their own lines.
 
    The grammar is in two parts:
      1. lexical rules: how bytes form tokens (the lexer, a state machine)
      2. syntax rules:  how tokens form a program (the recursive-descent
                        parser, one function per rule)
+   The rules the semantic pass enforces (types, scopes, mutability) are
+   listed in README.md.
    ====================================================================== *)
 
 
@@ -33,42 +35,56 @@ bit ::= ":" | "|"
    or a digit: "|||||||||" (9 bits) and "|:::::::x" are lexical errors.
 
    The values are chosen so they are easy to remember:
-     false = 0 and true = 1
-     bool  = 2, because a bool has two values
-     i32   = 32 and i64 = 64, their bit widths
-     else  = 15 = 00001111, the bitwise inverse of if = 11110000
-     while = 170 = 10101010, alternating bits for a loop
-     exit  = 255 = 11111111, a solid wall at the end of the program *)
+     false  = 0 and true = 1
+     bool   = 2, because a bool has two values
+     i32    = 32 and i64 = 64, their bit widths
+     else   = 15 = 00001111, the bitwise inverse of if = 11110000
+     while  = 170 = 10101010, alternating bits for a loop
+     exit   = 255 = 11111111, a solid wall at the end of the program
+     struct = 6  = 0000 0110 and fn = 96 = 0110 0000: the same pattern
+              0110, in the low half for data and in the high half for code
+     read   = 97 = fn + 1 and print = 98 = fn + 2: they are the built-in
+              functions, so they share fn's 0110 prefix *)
 
-FALSE    ::= "::::::::"        (*   0  00000000 *)
-TRUE     ::= ":::::::|"        (*   1  00000001 *)
-BOOL     ::= "::::::|:"        (*   2  00000010 *)
-ELSE     ::= "::::||||"        (*  15  00001111 *)
-I32      ::= "::|:::::"        (*  32  00100000 *)
-I64      ::= ":|::::::"        (*  64  01000000 *)
-BOOL_MUT ::= "|:::::|:"        (* 130  10000010 *)
-I32_MUT  ::= "|:|:::::"        (* 160  10100000 *)
-WHILE    ::= "|:|:|:|:"        (* 170  10101010 *)
-I64_MUT  ::= "||::::::"        (* 192  11000000 *)
-IF       ::= "||||::::"        (* 240  11110000 *)
-EXIT     ::= "||||||||"        (* 255  11111111 *)
+FALSE      ::= "::::::::"      (*   0  00000000 *)
+TRUE       ::= ":::::::|"      (*   1  00000001 *)
+BOOL       ::= "::::::|:"      (*   2  00000010 *)
+STRUCT     ::= ":::::||:"      (*   6  00000110 *)
+ELSE       ::= "::::||||"      (*  15  00001111 *)
+I32        ::= "::|:::::"      (*  32  00100000 *)
+I64        ::= ":|::::::"      (*  64  01000000 *)
+FN         ::= ":||:::::"      (*  96  01100000 *)
+READ       ::= ":||::::|"      (*  97  01100001 *)
+PRINT      ::= ":||:::|:"      (*  98  01100010 *)
+BOOL_MUT   ::= "|:::::|:"      (* 130  10000010 *)
+STRUCT_MUT ::= "|::::||:"      (* 134  10000110 *)
+I32_MUT    ::= "|:|:::::"      (* 160  10100000 *)
+WHILE      ::= "|:|:|:|:"      (* 170  10101010 *)
+I64_MUT    ::= "||::::::"      (* 192  11000000 *)
+IF         ::= "||||::::"      (* 240  11110000 *)
+EXIT       ::= "||||||||"      (* 255  11111111 *)
 
 (* The mutability bit.
    There is no separate "mut" keyword. A type key with its top bit
-   (value 128) set declares a mutable variable of that type:
-       i64      ":|::::::"   64
-       i64 mut  "||::::::"   64 + 128 = 192
+   (value 128) set declares a mutable variable, field or object of that
+   type:
+       i64         ":|::::::"    64
+       i64 mut     "||::::::"    64 + 128 = 192
+       struct      ":::::||:"     6
+       struct mut  "|::::||:"     6 + 128 = 134
    The top bit alone, "|:::::::" (128), is not a key: it is a lexical
    error ("mutable bit set without a type").
 
    To keep this conflict-free, every type key is below 128, and
    type + 128 is never used by another keyword. The other keys with the
    top bit set are while (128 + 42), if (128 + 112) and exit (128 + 127),
-   and 42, 112 and 127 are not type keys. *)
+   and 42, 112 and 127 are not type keys. fn, read and print have no
+   mutable form: 224, 225 and 226 are unknown keys. *)
 
 (* Identifiers are ASCII letters, digits and "_", and do not start with a
    digit. ":" and "|" cannot appear in an identifier, so an identifier
-   never looks like a key. *)
+   never looks like a key. Variables, functions and structs are named by
+   identifiers. *)
 ident  ::= letter { letter | digit }
 letter ::= "a" .. "z" | "A" .. "Z" | "_"
 digit  ::= "0" .. "9"
@@ -81,15 +97,21 @@ digit  ::= "0" .. "9"
         lexical error.
      2. A literal that does not fit its target type is a compile error:
         "::|::::: x {3000000000}" fails, as 3000000000 > 2147483647, the
-        largest i32. This depends on the declared type, so it is checked
-        in the semantic stage.
+        largest i32.
      3. An i32 value widens to i64 automatically; an i64 never narrows
         to i32, so assigning an i64 to an i32 is a type error.
      4. If "+", "-" or "*" overflows its result type at run time, the
         program stops with a runtime error instead of wrapping around.
-   Only rule 1 belongs to this stage's lexer; rules 2-4 are part of the
-   language and are enforced by the later stages. *)
+   Rule 1 belongs to the lexer, rules 2 and 3 to the semantic pass and
+   rule 4 to the generated code. *)
 number ::= digit { digit }
+
+(* A string literal is a '"', any bytes except '"' and a newline, then a
+   '"'. There are no escape sequences: every byte stands for itself, so
+   ":", "|" and "//" inside a string are not keys or comments. A string
+   with no closing '"' on its line is a lexical error. A string stands
+   only after print. *)
+string ::= '"' { any byte except '"' and "\n" } '"'
 
 (* Assignment is "=" and comparison is "==". The lexer tells them apart
    by looking at the byte after the first "=". *)
@@ -100,6 +122,8 @@ NOT    ::= "!"
 PLUS   ::= "+"
 MINUS  ::= "-"
 STAR   ::= "*"
+COMMA  ::= ","
+DOT    ::= "."
 
 (* A comment runs from "//" to the end of the line. A single "/" is a
    lexical error: there is no division. *)
@@ -120,26 +144,84 @@ NL ::= "\n" { "\n" | whitespace | comment }
    2. SYNTAX RULES
    ---------------------------------------------------------------------- *)
 
-(* A program is a list of statements and must end with exit. Nothing may
-   follow the exit. The final newline is optional. *)
-program ::= [ NL ] { statement } exit_stmt [ NL ]
+(* A program declares its structs first, then its functions, then runs
+   its statements, and must end with exit. Nothing may follow the exit.
+   The final newline is optional. Structs and functions are declared
+   only here, at the top level. *)
+program ::= [ NL ] { struct_decl } { fn_decl } { statement } exit_stmt [ NL ]
+
+(* Types. A built-in type is one key. A struct type is the struct key
+   followed by the struct's name, so every declaration, field and
+   parameter starts with a type key, and its top bit decides mutability
+   for every type alike. *)
+type     ::= I32 | I64 | BOOL | STRUCT ident
+mut_type ::= I32_MUT | I64_MUT | BOOL_MUT | STRUCT_MUT ident
+
+(* A struct declaration is the struct key, the name and a newline; an
+   object declaration ("STRUCT ident ident") has a variable name after
+   the struct's name, and that token tells the two apart. A struct holds
+   at least one field, then its member functions. A struct is declared
+   with the plain struct key: mutability belongs to fields and objects,
+   so "|::::||: Point" followed by a newline is a syntax error. *)
+struct_decl ::= STRUCT ident NL "{" NL field { field } { fn_decl } "}" NL
+
+(* A field has no initial value: an object gives one for every field
+   when it is created. *)
+field ::= ( type | mut_type ) ident NL
+
+(* A function: the fn key, the name, the parameters in parentheses and
+   the result type. The result FALSE (00000000, no bits set) means the
+   function returns nothing.
+
+   The body of a function with a result type ends with exit, so no path
+   reaches the end of the body without a value. The body of a function
+   that returns nothing may end without exit. The same rule declares a
+   member function inside a struct.
+
+   A parameter is a constant, so it takes a plain type key: a mutable
+   key in the parameter list is a syntax error. *)
+fn_decl    ::= FN ident params type NL result_body
+             | FN ident params FALSE NL block
+params     ::= "(" [ param { COMMA param } ] ")"
+param      ::= type ident
+result_body ::= "{" NL { statement } exit_stmt NL "}" NL
 
 (* Simple statements end with their own NL. if and while end with a
    block, and a block already consumes the NL after its "}". *)
 statement ::= decl NL
             | assign NL
+            | call_stmt NL
+            | print NL
             | if
             | while
 
-(* A declaration always has an initialiser in braces. The type key
-   decides both the type and the mutability. A variable declared with a
-   plain type key is a constant and cannot be assigned later (checked in
-   the semantic stage). *)
-decl     ::= ( type | mut_type ) ident "{" expr "}"
-type     ::= I32 | I64 | BOOL
-mut_type ::= I32_MUT | I64_MUT | BOOL_MUT
+(* A declaration always has an initial value in braces. The type key
+   decides both the type and the mutability.
 
-assign ::= ident ASSIGN expr
+   An initial value is a list of values in braces. A built-in type takes
+   exactly one expression, so "::|::::: x {1 + 2}" is unchanged from
+   Stage 1. A struct type takes one value per field, in order, where a
+   struct field's value may be a nested list, or a single object of the
+   same struct, which is copied. *)
+decl  ::= ( type | mut_type ) ident init
+init  ::= "{" value { COMMA value } "}"
+value ::= expr | init
+
+(* Assignment writes a variable or a field reached through a chain of
+   names. A call result is a temporary and cannot be assigned, so the
+   chain holds no calls. *)
+assign ::= ident { DOT ident } ASSIGN expr
+
+(* A call standing alone as a statement: a chain whose last link is a
+   call. The links before it may be fields or calls:
+     f(1)    p.shift(2)    c.center.reset()    p.moved(1).shift(2)
+   assign and call_stmt both start with an identifier; the parser reads
+   the chain and decides by what follows it ("=" or the end of the
+   line). *)
+call_stmt ::= ident { [ args ] DOT ident } args
+
+(* print prints one value, or a string literal, and then a newline. *)
+print ::= PRINT ( expr | string )
 
 (* The condition is on the same line as the keyword. The block starts on
    the next line. else stands alone on its own line between the two
@@ -154,15 +236,18 @@ block ::= "{" NL body "}" NL
 body  ::= statement { statement } [ exit_stmt NL ]
         | exit_stmt NL
 
-(* exit takes a single factor: a literal, a variable, a negation or a
-   parenthesised expression. *)
-exit_stmt ::= EXIT factor
+(* exit takes a single factor: a literal, a variable, a chain, a call,
+   read, a negation or a parenthesised expression. At the top level it
+   ends the program, inside a function it leaves the function. The value
+   may be left out only inside a function that returns nothing. *)
+exit_stmt ::= EXIT [ factor ]
 
 (* Expressions, from lowest to highest precedence:
      comparison   ==  !=    at most one per expression; not chained
      additive     +   -     left-associative
      product      *         left-associative
      prefix       !         applies to one factor; it nests ("!!x")
+     postfix      .  ()     field access and calls, left to right
    Parentheses override precedence. *)
 expr   ::= arith [ ( EQ | NE ) arith ]
 arith  ::= term { ( PLUS | MINUS ) term }
@@ -170,6 +255,15 @@ term   ::= factor { STAR factor }
 factor ::= number
          | TRUE
          | FALSE
-         | ident
+         | READ
+         | chain
          | NOT factor
          | "(" expr ")"
+
+(* A chain starts with a variable or a call and continues with fields
+   and member calls:
+     x    p.x    c.center.x    f(1)    p.d2()    origin().x    p.moved(1).d2()
+   A name followed by "(" is a call. read takes no parentheses: it is the
+   key alone. *)
+chain ::= ident [ args ] { DOT ident [ args ] }
+args  ::= "(" [ expr { COMMA expr } ] ")"

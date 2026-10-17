@@ -4,7 +4,17 @@
 #include <cstdio>
 #include <iostream>
 
-enum lex_state { START, KEY, IDENT, NUMBER, EQUAL, BANG, SLASH, COMMENT };
+enum lex_state {
+  START,
+  KEY,
+  IDENT,
+  NUMBER,
+  EQUAL,
+  BANG,
+  SLASH,
+  COMMENT,
+  STRING
+};
 
 static const int KEY_BITS = 8;
 static const std::string I64_MAX = "9223372036854775807";
@@ -17,14 +27,24 @@ std::string key_name(int key) {
     return "true";
   case KEY_BOOL:
     return "bool";
+  case KEY_STRUCT:
+    return "struct";
   case KEY_ELSE:
     return "else";
   case KEY_I32:
     return "i32";
   case KEY_I64:
     return "i64";
+  case KEY_FN:
+    return "fn";
+  case KEY_READ:
+    return "read";
+  case KEY_PRINT:
+    return "print";
   case KEY_BOOL | KEY_MUT:
     return "bool mut";
+  case KEY_STRUCT | KEY_MUT:
+    return "struct mut";
   case KEY_I32 | KEY_MUT:
     return "i32 mut";
   case KEY_I64 | KEY_MUT:
@@ -43,10 +63,13 @@ bool is_type_key(int key) {
   if (key < 0)
     return false;
   int base = key & ~KEY_MUT;
-  return base == KEY_BOOL || base == KEY_I32 || base == KEY_I64;
+  return base == KEY_BOOL || base == KEY_I32 || base == KEY_I64 ||
+         base == KEY_STRUCT;
 }
 
 bool is_mut_key(int key) { return is_type_key(key) && (key & KEY_MUT); }
+
+bool is_struct_key(int key) { return key >= 0 && (key & ~KEY_MUT) == KEY_STRUCT; }
 
 std::string type_name(int key) { return key_name(key & ~KEY_MUT); }
 
@@ -64,6 +87,12 @@ static const char *kind_name(tok_kind k) {
     return "brace";
   case TK_PAREN:
     return "paren";
+  case TK_COMMA:
+    return "comma";
+  case TK_DOT:
+    return "dot";
+  case TK_STRING:
+    return "string";
   case TK_NEWLINE:
     return "newline";
   case TK_EOF:
@@ -142,6 +171,12 @@ std::vector<token> tokenize(const std::string &s) {
         toks.push_back({TK_BRACE, std::string(1, (char)b), line, col});
       } else if (b == '(' || b == ')') {
         toks.push_back({TK_PAREN, std::string(1, (char)b), line, col});
+      } else if (b == ',') {
+        toks.push_back({TK_COMMA, ",", line, col});
+      } else if (b == '.') {
+        toks.push_back({TK_DOT, ".", line, col});
+      } else if (b == '"') {
+        state = STRING;
       } else {
         error(line, col, "unexpected byte '" + show_byte(b) + "'");
       }
@@ -230,6 +265,14 @@ std::vector<token> tokenize(const std::string &s) {
         state = START;
         continue;
       }
+    } else if (state == STRING) {
+      if (eof || b == '\n')
+        error(line, start_col, "string is never closed on its line");
+      if (b == '"') {
+        toks.push_back(
+            {TK_STRING, s.substr(start + 1, i - start - 1), line, start_col});
+        state = START;
+      }
     }
     i++;
     col++;
@@ -258,6 +301,8 @@ std::string describe(const token &tok) {
     return "the end of the file";
   case TK_KEY:
     return "'" + tok.text + "' (" + key_name(tok.key) + ")";
+  case TK_STRING:
+    return "the string \"" + tok.text + "\"";
   default:
     return "'" + tok.text + "'";
   }

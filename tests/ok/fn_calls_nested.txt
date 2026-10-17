@@ -1,0 +1,74 @@
+// calls as arguments of calls, member calls on fields and call results, a global struct, exit from a loop
+:::::||: Point
+{
+    |:|::::: x
+    |:|::::: y
+
+    :||::::: sum () ::|:::::
+    {
+        |||||||| (x + y)
+    }
+
+    :||::::: scaled (::|::::: k) :::::||: Point
+    {
+        :::::||: Point q {x * k, y * k}
+        |||||||| q
+    }
+
+    :||::::: show () ::::::::
+    {
+        :||:::|: "point:"
+        :||:::|: x
+    }
+}
+:::::||: Line
+{
+    |::::||: Point a
+    |::::||: Point b
+
+    :||::::: len2 () ::|:::::
+    {
+        ::|::::: dx {b.x - a.x}
+        ::|::::: dy {b.y - a.y}
+        |||||||| (dx * dx + dy * dy)
+    }
+
+    :||::::: stretch () ::::::::
+    {
+        b = b.scaled(2)
+        a.show()
+    }
+}
+:||::::: add (::|::::: a, ::|::::: b) ::|:::::
+{
+    |||||||| (a + b)
+}
+:||::::: mid (:::::||: Point p, :::::||: Point q) :::::||: Point
+{
+    :::::||: Point m {add(p.x, q.x), add(p.y, q.y)}
+    |||||||| m
+}
+:||::::: reset_origin () ::::::::
+{
+    origin.x = 0
+    origin.y = 0
+}
+|::::||: Point origin {5, 5}
+|::::||: Line l {{1, 1}, {4, 5}}
+:||:::|: add(add(1, 2), add(l.len2(), origin.sum()))
+:||:::|: mid(l.a, l.b.scaled(2))
+:||:::|: add(mid(l.a, l.b).sum(), 1)
+l.stretch()
+:||:::|: l
+reset_origin()
+:||:::|: origin
+|:|::::: i {0}
+|:|:|:|: i != 3
+{
+    ||||:::: i == 2
+    {
+        |||||||| (i * 100)
+    }
+    i = i + 1
+}
+|||||||| 0

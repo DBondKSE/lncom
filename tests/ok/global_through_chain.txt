@@ -1,0 +1,20 @@
+// a global used through a chain of functions, and by a recursive one
+:||::::: base () ::|:::::
+{
+    |||||||| offset
+}
+:||::::: shifted (::|::::: n) ::|:::::
+{
+    |||||||| (n + base())
+}
+:||::::: sum_to (::|::::: n) ::|:::::
+{
+    ||||:::: n == 0
+    {
+        |||||||| offset
+    }
+    |||||||| (n + sum_to(n - 1))
+}
+::|::::: offset {100}
+:||:::|: shifted(5)
+|||||||| sum_to(3)

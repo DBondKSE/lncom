@@ -1,0 +1,7 @@
+// an i64 * that does not fit stops the program, also inside a function
+:||::::: square (:|:::::: n) :|::::::
+{
+    |||||||| (n * n)
+}
+:|:::::: big {5000000000}
+|||||||| square(big)

@@ -1,0 +1,6 @@
+// arguments are evaluated left to right
+:||::::: minus (::|::::: a, ::|::::: b) ::|:::::
+{
+    |||||||| (a - b)
+}
+|||||||| minus(:||::::|, :||::::|)

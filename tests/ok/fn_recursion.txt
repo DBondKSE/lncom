@@ -1,0 +1,15 @@
+// a recursive function with a result, and a function that returns nothing
+:||::::: fact (::|::::: n) :|::::::
+{
+    ||||:::: n == 0
+    {
+        |||||||| 1
+    }
+    |||||||| (n * fact(n - 1))
+}
+:||::::: greet () ::::::::
+{
+    :||:::|: "hello"
+}
+greet()
+|||||||| fact(10)

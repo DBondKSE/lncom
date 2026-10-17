@@ -1,0 +1,2 @@
+Circle{center: Point{x: 10, y: 2}, r: 5}
+Program exit with result 5

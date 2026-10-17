@@ -1,0 +1,8 @@
+38
+Point{x: 9, y: 11}
+12
+point:
+1
+Line{a: Point{x: 1, y: 1}, b: Point{x: 8, y: 10}}
+Point{x: 0, y: 0}
+Program exit with result 200

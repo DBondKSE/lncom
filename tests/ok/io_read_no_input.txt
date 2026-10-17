@@ -1,0 +1,3 @@
+// when no integer can be read, read gives 0
+::|::::: n {:||::::|}
+|||||||| n

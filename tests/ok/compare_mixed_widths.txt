@@ -1,0 +1,7 @@
+// == and != compare integers of any widths, or two bools
+::|::::: small {5}
+:|:::::: big {5}
+::::::|: t {:::::::|}
+:||:::|: small == big
+:||:::|: t != (small == big)
+|||||||| (big != 6)
