@@ -39,3 +39,6 @@ Review the staged files and do task 4 of the file - write enough test cases to c
 -> 30/72 new valid/invalid programs
 
 ---
+
+Update README.md with new functionality description, in the same style as already present.
+-> Updated README.md
