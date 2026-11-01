@@ -29,10 +29,16 @@ std::string key_name(int key) {
     return "bool";
   case KEY_STRUCT:
     return "struct";
+  case KEY_ARRAY:
+    return "array";
+  case KEY_MUTEX:
+    return "mutex";
   case KEY_ELSE:
     return "else";
   case KEY_I32:
     return "i32";
+  case KEY_LOCK:
+    return "lock";
   case KEY_I64:
     return "i64";
   case KEY_FN:
@@ -41,10 +47,14 @@ std::string key_name(int key) {
     return "read";
   case KEY_PRINT:
     return "print";
+  case KEY_SPAWN:
+    return "spawn";
   case KEY_BOOL | KEY_MUT:
     return "bool mut";
   case KEY_STRUCT | KEY_MUT:
     return "struct mut";
+  case KEY_ARRAY | KEY_MUT:
+    return "array mut";
   case KEY_I32 | KEY_MUT:
     return "i32 mut";
   case KEY_I64 | KEY_MUT:
@@ -64,12 +74,18 @@ bool is_type_key(int key) {
     return false;
   int base = key & ~KEY_MUT;
   return base == KEY_BOOL || base == KEY_I32 || base == KEY_I64 ||
-         base == KEY_STRUCT;
+         base == KEY_STRUCT || base == KEY_ARRAY;
 }
 
 bool is_mut_key(int key) { return is_type_key(key) && (key & KEY_MUT); }
 
 bool is_struct_key(int key) { return key >= 0 && (key & ~KEY_MUT) == KEY_STRUCT; }
+
+bool is_array_key(int key) { return key >= 0 && (key & ~KEY_MUT) == KEY_ARRAY; }
+
+bool is_builtin_key(int key) {
+  return key == KEY_BOOL || key == KEY_I32 || key == KEY_I64;
+}
 
 std::string type_name(int key) { return key_name(key & ~KEY_MUT); }
 
@@ -91,6 +107,8 @@ static const char *kind_name(tok_kind k) {
     return "comma";
   case TK_DOT:
     return "dot";
+  case TK_AT:
+    return "at";
   case TK_STRING:
     return "string";
   case TK_NEWLINE:
@@ -175,6 +193,8 @@ std::vector<token> tokenize(const std::string &s) {
         toks.push_back({TK_COMMA, ",", line, col});
       } else if (b == '.') {
         toks.push_back({TK_DOT, ".", line, col});
+      } else if (b == '@') {
+        toks.push_back({TK_AT, "@", line, col});
       } else if (b == '"') {
         state = STRING;
       } else {

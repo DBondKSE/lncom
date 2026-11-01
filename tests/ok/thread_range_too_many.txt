@@ -1,0 +1,12 @@
+// a range line starts at most 1024 threads: more stops the program
+:||::::: f (::|::::: k) ::::::::
+{
+    :||:::|: k
+}
+::|::::: n {:||::::|}
+:||:::|: "start"
+:||:::||
+{
+    @n f(@)
+}
+|||||||| 0

@@ -1,0 +1,6 @@
+// a declaration in a spawn block takes the result of one call
+:||:::||
+{
+    ::|::::: a {1 + 2}
+}
+|||||||| 0

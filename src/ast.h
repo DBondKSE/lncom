@@ -29,6 +29,12 @@ class InitNode;
 class ReadNode;
 class IntNode;
 class BoolNode;
+class ArrayNode;
+class IndexNode;
+class ThreadIndexNode;
+class SpawnNode;
+class RangeNode;
+class LockNode;
 
 class Visitor {
 public:
@@ -55,6 +61,12 @@ public:
   virtual void visit_read(ReadNode &node) = 0;
   virtual void visit_int(IntNode &node) = 0;
   virtual void visit_bool(BoolNode &node) = 0;
+  virtual void visit_array(ArrayNode &node) = 0;
+  virtual void visit_index(IndexNode &node) = 0;
+  virtual void visit_thread_index(ThreadIndexNode &node) = 0;
+  virtual void visit_spawn(SpawnNode &node) = 0;
+  virtual void visit_range(RangeNode &node) = 0;
+  virtual void visit_lock(LockNode &node) = 0;
 };
 
 class ASTNode;
@@ -96,6 +108,22 @@ inline std::string type_label(const std::string &type_name, bool is_struct) {
 }
 
 inline std::string mut_label(bool mut) { return mut ? " mut" : " const"; }
+
+inline std::string array_type(const std::string &element, uint64_t size) {
+  return element + "@" + std::to_string(size);
+}
+
+inline bool is_array_type(const std::string &type) {
+  return type.find('@') != std::string::npos;
+}
+
+inline std::string element_type(const std::string &type) {
+  return type.substr(0, type.find('@'));
+}
+
+inline uint64_t array_size(const std::string &type) {
+  return std::stoull(type.substr(type.find('@') + 1));
+}
 
 template <class T>
 void add_children(std::vector<Child> &c, const std::string &role,
@@ -254,6 +282,46 @@ public:
   }
 };
 
+class ArrayNode : public ExprNode {
+public:
+  std::string element;
+  uint64_t size;
+  std::unique_ptr<ExprNode> fill;
+  ArrayNode(uint64_t line, uint64_t col, std::string element, uint64_t size,
+            std::unique_ptr<ExprNode> fill)
+      : ExprNode(line, col), element(std::move(element)), size(size),
+        fill(std::move(fill)) {}
+  void accept(Visitor &visitor) override { visitor.visit_array(*this); }
+  std::string label() const override {
+    return "Array " + array_type(element, size);
+  }
+  std::vector<Child> children() const override {
+    if (fill)
+      return {{"fill", fill.get()}};
+    return {};
+  }
+};
+
+class IndexNode : public ExprNode {
+public:
+  std::unique_ptr<ExprNode> array, index;
+  IndexNode(uint64_t line, uint64_t col, std::unique_ptr<ExprNode> array,
+            std::unique_ptr<ExprNode> index)
+      : ExprNode(line, col), array(std::move(array)), index(std::move(index)) {}
+  void accept(Visitor &visitor) override { visitor.visit_index(*this); }
+  std::string label() const override { return "Index"; }
+  std::vector<Child> children() const override {
+    return {{"array", array.get()}, {"index", index.get()}};
+  }
+};
+
+class ThreadIndexNode : public ExprNode {
+public:
+  using ExprNode::ExprNode;
+  void accept(Visitor &visitor) override { visitor.visit_thread_index(*this); }
+  std::string label() const override { return "ThreadIndex"; }
+};
+
 class StmtNode : public ASTNode {
 public:
   using ASTNode::ASTNode;
@@ -324,18 +392,24 @@ class AssignNode : public StmtNode {
 public:
   std::string name;
   std::vector<Link> links;
+  std::unique_ptr<ExprNode> index;
+  uint64_t index_col = 0;
   std::unique_ptr<ExprNode> value;
   const DeclNode *decl = nullptr;
   std::string type;
   AssignNode(uint64_t line, uint64_t col, std::string name,
-             std::vector<Link> links, std::unique_ptr<ExprNode> value)
+             std::vector<Link> links, std::unique_ptr<ExprNode> value,
+             std::unique_ptr<ExprNode> index = nullptr, uint64_t index_col = 0)
       : StmtNode(line, col), name(std::move(name)), links(std::move(links)),
+        index(std::move(index)), index_col(index_col),
         value(std::move(value)) {}
   void accept(Visitor &visitor) override { visitor.visit_assign(*this); }
   std::string label() const override {
-    return "Assign " + chain(name, links);
+    return "Assign " + chain(name, links) + (index ? "@" : "");
   }
   std::vector<Child> children() const override {
+    if (index)
+      return {{"index", index.get()}, {"value", value.get()}};
     return {{"value", value.get()}};
   }
 };
@@ -440,6 +514,61 @@ public:
   }
 };
 
+class RangeNode : public StmtNode {
+public:
+  std::unique_ptr<ExprNode> count;
+  std::unique_ptr<CallNode> call;
+  RangeNode(uint64_t line, uint64_t col, std::unique_ptr<ExprNode> count,
+            std::unique_ptr<CallNode> call)
+      : StmtNode(line, col), count(std::move(count)), call(std::move(call)) {}
+  void accept(Visitor &visitor) override { visitor.visit_range(*this); }
+  std::string label() const override { return "Range"; }
+  std::vector<Child> children() const override {
+    return {{"count", count.get()}, {"call", call.get()}};
+  }
+};
+
+class SpawnNode : public StmtNode {
+public:
+  std::vector<std::unique_ptr<StmtNode>> lines;
+  SpawnNode(uint64_t line, uint64_t col,
+            std::vector<std::unique_ptr<StmtNode>> lines)
+      : StmtNode(line, col), lines(std::move(lines)) {}
+  void accept(Visitor &visitor) override { visitor.visit_spawn(*this); }
+  std::string label() const override { return "Spawn"; }
+  std::vector<Child> children() const override {
+    std::vector<Child> c;
+    add_children(c, "", lines);
+    return c;
+  }
+};
+
+class MutexNode : public ASTNode {
+public:
+  std::string name;
+  MutexNode(uint64_t line, uint64_t col, std::string name)
+      : ASTNode(line, col), name(std::move(name)) {}
+  void accept(Visitor &) override {}
+  std::string label() const override { return "Mutex " + name; }
+};
+
+class LockNode : public StmtNode {
+public:
+  std::string name;
+  uint64_t name_col;
+  std::unique_ptr<BlockNode> body;
+  const MutexNode *mutex = nullptr;
+  LockNode(uint64_t line, uint64_t col, std::string name, uint64_t name_col,
+           std::unique_ptr<BlockNode> body)
+      : StmtNode(line, col), name(std::move(name)), name_col(name_col),
+        body(std::move(body)) {}
+  void accept(Visitor &visitor) override { visitor.visit_lock(*this); }
+  std::string label() const override { return "Lock " + name; }
+  std::vector<Child> children() const override {
+    return {{"body", body.get()}};
+  }
+};
+
 class FnNode : public ASTNode {
 public:
   std::string name;
@@ -511,22 +640,25 @@ public:
 class ProgramNode : public ASTNode {
 public:
   std::vector<std::unique_ptr<StructNode>> structs;
+  std::vector<std::unique_ptr<MutexNode>> mutexes;
   std::vector<std::unique_ptr<FnNode>> functions;
   std::vector<std::unique_ptr<StmtNode>> statements;
   std::unique_ptr<ExitNode> exit;
   ProgramNode(uint64_t line, uint64_t col,
               std::vector<std::unique_ptr<StructNode>> structs,
+              std::vector<std::unique_ptr<MutexNode>> mutexes,
               std::vector<std::unique_ptr<FnNode>> functions,
               std::vector<std::unique_ptr<StmtNode>> statements,
               std::unique_ptr<ExitNode> exit)
       : ASTNode(line, col), structs(std::move(structs)),
-        functions(std::move(functions)), statements(std::move(statements)),
-        exit(std::move(exit)) {}
+        mutexes(std::move(mutexes)), functions(std::move(functions)),
+        statements(std::move(statements)), exit(std::move(exit)) {}
   void accept(Visitor &visitor) override { visitor.visit_program(*this); }
   std::string label() const override { return "Program"; }
   std::vector<Child> children() const override {
     std::vector<Child> c;
     add_children(c, "", structs);
+    add_children(c, "", mutexes);
     add_children(c, "", functions);
     add_children(c, "", statements);
     c.push_back({"", exit.get()});

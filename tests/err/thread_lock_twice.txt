@@ -1,0 +1,10 @@
+// locking a mutex that is already held waits forever
+::::||:: m
+::||||:: m
+{
+    ::||||:: m
+    {
+        :||:::|: 1
+    }
+}
+|||||||| 0

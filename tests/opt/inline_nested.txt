@@ -1,0 +1,27 @@
+// far is inlined into the exit of check, then check into the condition
+// of the if; the struct and the array arguments are copied into the
+// declarations that replace the parameters
+:::::||: Point
+{
+    ::|::::: x
+    ::|::::: y
+}
+:||::::: far (:::::||: Point p, ::::|:|:@::|:::::@2 lim) ::::::|:
+{
+    ::|::::: d {p.x + p.y}
+    |||||||| (d != lim@0)
+}
+:||::::: check (:::::||: Point p) ::::::|:
+{
+    |||||||| far(p, ::|:::::@2@7)
+}
+:::::||: Point q {3, 4}
+||||:::: check(q)
+{
+    :||:::|: "not seven"
+}
+::::||||
+{
+    :||:::|: "seven"
+}
+|||||||| 0

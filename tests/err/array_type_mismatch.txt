@@ -1,0 +1,4 @@
+// an i64 array cannot replace an i32 array
+|:::|:|: a {::|:::::@4}
+a = :|::::::@4
+|||||||| 0

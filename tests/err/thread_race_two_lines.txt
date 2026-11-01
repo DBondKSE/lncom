@@ -1,0 +1,12 @@
+// two threads of one spawn block write total without a lock
+:||::::: add (::|::::: k) ::::::::
+{
+    total = total + k
+}
+||:::::: total {0}
+:||:::||
+{
+    add(1)
+    add(2)
+}
+|||||||| total

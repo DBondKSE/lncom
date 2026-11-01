@@ -1,0 +1,24 @@
+// take leaves through exit inside the lock: the mutex is unlocked on the
+// way out, so the next thread can lock it again
+::::||:: m
+:||::::: take (::|::::: k) ::::::::
+{
+    ::||||:: m
+    {
+        ||||:::: k == 0
+        {
+            zeros = zeros + 1
+            ||||||||
+        }
+        others = others + 1
+    }
+}
+|:|::::: zeros {0}
+|:|::::: others {0}
+:||:::||
+{
+    @8 take(@)
+}
+:||:::|: zeros
+:||:::|: others
+|||||||| 0

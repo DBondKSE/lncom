@@ -1,0 +1,13 @@
+// a spawn line calls a function of the program, not a member function
+:::::||: P
+{
+    ::|::::: x
+    :||::::: go () ::::::::
+    {
+        :||:::||
+        {
+            go()
+        }
+    }
+}
+|||||||| 0

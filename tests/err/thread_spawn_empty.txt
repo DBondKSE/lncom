@@ -1,0 +1,5 @@
+// a spawn block needs at least one line
+:||:::||
+{
+}
+|||||||| 0

@@ -1,0 +1,21 @@
+// two threads sum the two halves of 1..1000; '}' joins them, then a and b
+// hold their results
+:||::::: sum (::|::::: from, ::|::::: to) :|::::::
+{
+    ||:::::: s {0}
+    |:|::::: i {from}
+    |:|:|:|: i != to + 1
+    {
+        s = s + i
+        i = i + 1
+    }
+    |||||||| s
+}
+:||:::||
+{
+    :|:::::: a {sum(1, 500)}
+    :|:::::: b {sum(501, 1000)}
+}
+:||:::|: a
+:||:::|: b
+|||||||| (a + b)

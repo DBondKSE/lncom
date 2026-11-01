@@ -1,0 +1,3 @@
+// only an array takes an index
+::|::::: x {1}
+|||||||| x@0

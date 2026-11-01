@@ -1,0 +1,6 @@
+// a lock names a mutex that is not declared
+::||||:: m
+{
+    :||:::|: 1
+}
+|||||||| 0

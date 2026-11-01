@@ -1,0 +1,24 @@
+// the two threads lock different mutexes around the same global
+::::||:: m
+::::||:: n
+:||::::: one () ::::::::
+{
+    ::||||:: m
+    {
+        total = total + 1
+    }
+}
+:||::::: two () ::::::::
+{
+    ::||||:: n
+    {
+        total = total + 1
+    }
+}
+||:::::: total {0}
+:||:::||
+{
+    one()
+    two()
+}
+|||||||| total

@@ -44,20 +44,31 @@ bit ::= ":" | "|"
      struct = 6  = 0000 0110 and fn = 96 = 0110 0000: the same pattern
               0110, in the low half for data and in the high half for code
      read   = 97 = fn + 1 and print = 98 = fn + 2: they are the built-in
-              functions, so they share fn's 0110 prefix *)
+              functions, so they share fn's 0110 prefix
+     spawn  = 99 = fn + 3: it runs functions on threads
+     array  = 10 = 00001010: the alternating bits of while, moved into the
+              low half where the data keys live: cell, cell, cell
+     mutex  = 12 = 00001100: two bits held together
+     lock   = 60 = 00111100: mutex shifted by two, the same two bits held
+              inside a wider wall *)
 
 FALSE      ::= "::::::::"      (*   0  00000000 *)
 TRUE       ::= ":::::::|"      (*   1  00000001 *)
 BOOL       ::= "::::::|:"      (*   2  00000010 *)
 STRUCT     ::= ":::::||:"      (*   6  00000110 *)
+ARRAY      ::= "::::|:|:"      (*  10  00001010 *)
+MUTEX      ::= "::::||::"      (*  12  00001100 *)
 ELSE       ::= "::::||||"      (*  15  00001111 *)
 I32        ::= "::|:::::"      (*  32  00100000 *)
+LOCK       ::= "::||||::"      (*  60  00111100 *)
 I64        ::= ":|::::::"      (*  64  01000000 *)
 FN         ::= ":||:::::"      (*  96  01100000 *)
 READ       ::= ":||::::|"      (*  97  01100001 *)
 PRINT      ::= ":||:::|:"      (*  98  01100010 *)
+SPAWN      ::= ":||:::||"      (*  99  01100011 *)
 BOOL_MUT   ::= "|:::::|:"      (* 130  10000010 *)
 STRUCT_MUT ::= "|::::||:"      (* 134  10000110 *)
+ARRAY_MUT  ::= "|:::|:|:"      (* 138  10001010 *)
 I32_MUT    ::= "|:|:::::"      (* 160  10100000 *)
 WHILE      ::= "|:|:|:|:"      (* 170  10101010 *)
 I64_MUT    ::= "||::::::"      (* 192  11000000 *)
@@ -72,14 +83,17 @@ EXIT       ::= "||||||||"      (* 255  11111111 *)
        i64 mut     "||::::::"    64 + 128 = 192
        struct      ":::::||:"     6
        struct mut  "|::::||:"     6 + 128 = 134
+       array       "::::|:|:"    10
+       array mut   "|:::|:|:"    10 + 128 = 138
    The top bit alone, "|:::::::" (128), is not a key: it is a lexical
    error ("mutable bit set without a type").
 
    To keep this conflict-free, every type key is below 128, and
    type + 128 is never used by another keyword. The other keys with the
    top bit set are while (128 + 42), if (128 + 112) and exit (128 + 127),
-   and 42, 112 and 127 are not type keys. fn, read and print have no
-   mutable form: 224, 225 and 226 are unknown keys. *)
+   and 42, 112 and 127 are not type keys. fn, read, print and spawn have
+   no mutable form: 224, 225, 226 and 227 are unknown keys. mutex and lock
+   are not type keys either, so 140 and 188 are unknown keys too. *)
 
 (* Identifiers are ASCII letters, digits and "_", and do not start with a
    digit. ":" and "|" cannot appear in an identifier, so an identifier
@@ -125,6 +139,11 @@ STAR   ::= "*"
 COMMA  ::= ","
 DOT    ::= "."
 
+(* "@" separates the parts of an array type ("::|:::::@50"), indexes an
+   array ("a@i"), starts a range line in a spawn block ("@4 f(@)") and,
+   alone as an argument of that line, stands for the thread index. *)
+AT     ::= "@"
+
 (* A comment runs from "//" to the end of the line. A single "/" is a
    lexical error: there is no division. *)
 comment ::= "//" { any byte except "\n" }
@@ -144,18 +163,31 @@ NL ::= "\n" { "\n" | whitespace | comment }
    2. SYNTAX RULES
    ---------------------------------------------------------------------- *)
 
-(* A program declares its structs first, then its functions, then runs
-   its statements, and must end with exit. Nothing may follow the exit.
-   The final newline is optional. Structs and functions are declared
-   only here, at the top level. *)
-program ::= [ NL ] { struct_decl } { fn_decl } { statement } exit_stmt [ NL ]
+(* A program declares its structs first, then its mutexes, then its
+   functions, then runs its statements, and must end with exit. Nothing
+   may follow the exit. The final newline is optional. Structs, mutexes
+   and functions are declared only here, at the top level. *)
+program ::= [ NL ] { struct_decl } { mutex_decl } { fn_decl } { statement }
+            exit_stmt [ NL ]
+
+(* A mutex has a name and no value. Every mutex is ready before the first
+   statement runs, so every function may lock it. *)
+mutex_decl ::= MUTEX ident NL
 
 (* Types. A built-in type is one key. A struct type is the struct key
    followed by the struct's name, so every declaration, field and
    parameter starts with a type key, and its top bit decides mutability
    for every type alike. *)
-type     ::= I32 | I64 | BOOL | STRUCT ident
+type     ::= I32 | I64 | BOOL | STRUCT ident | ARRAY AT array_shape
 mut_type ::= I32_MUT | I64_MUT | BOOL_MUT | STRUCT_MUT ident
+           | ARRAY_MUT AT array_shape
+
+(* An array holds 1 to 4096 elements of one built-in type. The element
+   type takes a plain key: the top bit of the array key decides whether
+   the elements can be assigned. This full form names the type of a
+   field, a parameter and a result. *)
+builtin     ::= I32 | I64 | BOOL
+array_shape ::= builtin AT number
 
 (* A struct declaration is the struct key, the name and a newline; an
    object declaration ("STRUCT ident ident") has a variable name after
@@ -194,6 +226,8 @@ statement ::= decl NL
             | print NL
             | if
             | while
+            | spawn
+            | lock
 
 (* A declaration always has an initial value in braces. The type key
    decides both the type and the mutability.
@@ -204,13 +238,21 @@ statement ::= decl NL
    struct field's value may be a nested list, or a single object of the
    same struct, which is copied. *)
 decl  ::= ( type | mut_type ) ident init
+        | ( ARRAY | ARRAY_MUT ) ident "{" expr "}"
 init  ::= "{" value { COMMA value } "}"
 value ::= expr | init
+
+(* An array variable is declared with the array key alone: its element
+   type and size come from its initial value, which is an array value
+   (an array literal, another array, a call that returns one).
+     |:::|:|: a {::|:::::@50}       50 i32 zeros, mutable
+     ::::|:|: b {::|:::::@50@n}     50 copies of n, constant
+     ::::|:|: c {a}                 a copy of a *)
 
 (* Assignment writes a variable or a field reached through a chain of
    names. A call result is a temporary and cannot be assigned, so the
    chain holds no calls. *)
-assign ::= ident { DOT ident } ASSIGN expr
+assign ::= ident { DOT ident } [ AT index ] ASSIGN expr
 
 (* A call standing alone as a statement: a chain whose last link is a
    call. The links before it may be fields or calls:
@@ -228,6 +270,22 @@ print ::= PRINT ( expr | string )
    blocks. *)
 if    ::= IF expr NL block [ ELSE NL block ]
 while ::= WHILE expr NL block
+
+(* A spawn block runs every line on its own thread and waits for all of
+   them at its "}". A line is a call of a function of the program, a
+   declaration whose value is one such call, or a range line. A range
+   line starts count threads that call the same function; "@" alone as
+   an argument is the thread's index, 0 to count - 1. The variables the
+   declarations name are visible after the block, not inside it. *)
+spawn      ::= SPAWN NL "{" NL spawn_line { spawn_line } "}" NL
+spawn_line ::= ( type | mut_type ) ident "{" call "}" NL
+             | call NL
+             | AT factor call NL
+call       ::= ident args
+
+(* A lock block locks the mutex, runs its block and unlocks the mutex at
+   its "}", and also before an exit that leaves the block. *)
+lock ::= LOCK ident NL block
 
 (* "{" and "}" each stand alone on their own line. A block holds at
    least one statement, so an empty block is a syntax error. A block may
@@ -248,6 +306,7 @@ exit_stmt ::= EXIT [ factor ]
      product      *         left-associative
      prefix       !         applies to one factor; it nests ("!!x")
      postfix      .  ()     field access and calls, left to right
+     index        @         once, after the whole chain
    Parentheses override precedence. *)
 expr   ::= arith [ ( EQ | NE ) arith ]
 arith  ::= term { ( PLUS | MINUS ) term }
@@ -259,11 +318,20 @@ factor ::= number
          | chain
          | NOT factor
          | "(" expr ")"
+         | builtin AT number [ AT factor ]
+         | AT
+
+(* builtin AT number is an array literal: that many elements, all zero
+   (false), or all the value after the second "@". AT alone is the thread
+   index, which stands only as a whole argument of a range line. *)
 
 (* A chain starts with a variable or a call and continues with fields
    and member calls:
      x    p.x    c.center.x    f(1)    p.d2()    origin().x    p.moved(1).d2()
    A name followed by "(" is a call. read takes no parentheses: it is the
    key alone. *)
-chain ::= ident [ args ] { DOT ident [ args ] }
+chain ::= ident [ args ] { DOT ident [ args ] } [ AT index ]
 args  ::= "(" [ expr { COMMA expr } ] ")"
+
+(* An index follows the whole chain: a@i, p.cells@2, f()@(i + 1). *)
+index ::= number | chain | "(" expr ")"

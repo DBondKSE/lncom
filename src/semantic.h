@@ -24,6 +24,35 @@ class SemanticChecker : public Visitor {
   };
   std::vector<PendingCall> pending;
   bool mutation_known = false;
+  std::map<std::string, const MutexNode *> mutexes;
+  using Held = std::set<const MutexNode *>;
+  Held held;
+  std::map<const FnNode *, Held> locks;
+  struct Access {
+    const DeclNode *global;
+    bool write;
+    const MemberFnNode *via;
+    const FnNode *fn;
+    Held held;
+    uint64_t line, col;
+  };
+  std::vector<Access> accesses;
+  struct Edge {
+    const FnNode *caller, *callee;
+    Held held;
+    bool spawn;
+    std::string name;
+    uint64_t line, col;
+  };
+  std::vector<Edge> edges;
+  struct Spawn {
+    const SpawnNode *node;
+    std::vector<std::pair<const FnNode *, bool>> lines;
+  };
+  std::vector<Spawn> spawns;
+  const CallNode *spawn_call = nullptr;
+  bool index_allowed = false;
+  std::map<std::string, const DeclNode *> spawn_results;
 
   const std::string &check(ExprNode &node);
   const DeclNode *find(const std::string &name) const;
@@ -60,6 +89,15 @@ class SemanticChecker : public Visitor {
                    const StructNode *struct_type, const ASTNode &at,
                    const std::string &target);
   void declare_fn(FnNode &node);
+  void check_decl(DeclNode &node);
+  void declare_var(DeclNode &node);
+  void check_index(ExprNode &index, const std::string &array);
+  void record(const DeclNode &decl, bool write, const MemberFnNode *via,
+              const ASTNode &at);
+  const CallNode &spawned(StmtNode &line, Spawn &spawn);
+  std::map<const FnNode *, Held> reach(const FnNode *root) const;
+  void check_locks() const;
+  void check_races() const;
   void check_assignable(const ExprNode &expr, const std::string &want,
                         const ASTNode &at, const std::string &what) const;
 
@@ -86,4 +124,10 @@ public:
   void visit_read(ReadNode &node) override;
   void visit_int(IntNode &node) override;
   void visit_bool(BoolNode &node) override;
+  void visit_array(ArrayNode &node) override;
+  void visit_index(IndexNode &node) override;
+  void visit_thread_index(ThreadIndexNode &node) override;
+  void visit_spawn(SpawnNode &node) override;
+  void visit_range(RangeNode &node) override;
+  void visit_lock(LockNode &node) override;
 };

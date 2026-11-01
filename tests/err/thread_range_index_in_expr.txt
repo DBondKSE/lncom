@@ -1,0 +1,10 @@
+// '@' is a whole argument, not part of an expression
+:||::::: f (::|::::: k) ::::::::
+{
+    :||:::|: k
+}
+:||:::||
+{
+    @2 f(@ + 1)
+}
+|||||||| 0

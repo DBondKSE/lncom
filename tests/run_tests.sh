@@ -3,6 +3,14 @@ cd "$(dirname "$0")/.." || exit 1
 
 ./build.sh || exit 1
 
+flag=
+if [ "$1" = "--optimize" ]; then
+  flag=--optimize
+elif [ -n "$1" ]; then
+  echo "usage: $0 [--optimize]" >&2
+  exit 1
+fi
+
 LLVM_CONFIG=${LLVM_CONFIG:-$(command -v llvm-config || echo /opt/homebrew/opt/llvm/bin/llvm-config)}
 CLANG=${CLANG:-$("$LLVM_CONFIG" --bindir)/clang}
 tmp=$(mktemp -d)
@@ -24,38 +32,38 @@ show_diff() {
 }
 
 check_ast() {
-  local src=$1 name=$2
+  local src=$1 name=$2 opt=$3
   local got
-  got=$(./compiler --ast "$src" 2>&1)
+  got=$(./compiler --ast $opt "$src" 2>&1)
   local status=$?
   if [ $status -ne 0 ]; then
-    report_fail "$src" "--ast exited with $status: $got"
+    report_fail "$src" "--ast $opt exited with $status: $got"
     return 1
   elif [ "$got" != "$(cat "$name.ast")" ]; then
-    report_fail "$src" "--ast output differs from $name.ast:"
+    report_fail "$src" "--ast $opt output differs from $name.ast:"
     show_diff "$got" "$name.ast"
     return 1
   fi
 }
 
 check_run() {
-  local src=$1 name=$2
-  local ll=$tmp/out.ll prog=$tmp/prog input=/dev/null
+  local src=$1 name=$2 opt=$3 input=${4:-$2.in}
+  local ll=$tmp/out.ll prog=$tmp/prog
   rm -f "$ll" "$prog"
   local got
-  if ! got=$(./compiler "$src" "$ll" 2>&1); then
-    report_fail "$src" "did not compile: $got"
+  if ! got=$(./compiler $opt "$src" "$ll" 2>&1); then
+    report_fail "$src" "did not compile with '$opt': $got"
     return 1
   fi
-  if ! got=$("$CLANG" -Wno-override-module "$ll" -o "$prog" 2>&1); then
+  if ! got=$("$CLANG" -Wno-override-module -pthread "$ll" -o "$prog" 2>&1); then
     report_fail "$src" "clang failed: $got"
     return 1
   fi
-  [ -f "$name.in" ] && input=$name.in
+  [ -f "$input" ] || input=/dev/null
   got=$("$prog" <"$input" 2>"$tmp/stderr")
   local status=$?
   if [ "$got" != "$(cat "$name.expected")" ]; then
-    report_fail "$src" "output differs from $name.expected:"
+    report_fail "$src" "output with '$opt' differs from $name.expected:"
     show_diff "$got" "$name.expected"
     return 1
   fi
@@ -80,13 +88,36 @@ for src in tests/ok/*.txt; do
     report_fail "$src" "missing $name.ast or $name.expected"
     continue
   fi
-  if [ -f "$name.ast" ]; then
+  if [ -f "$name.ast" ] && [ -z "$flag" ]; then
     check_ast "$src" "$name" || continue
   fi
   if [ -f "$name.expected" ]; then
-    check_run "$src" "$name" || continue
+    check_run "$src" "$name" "$flag" || continue
   fi
   echo "ok   $src"
+  pass=$((pass + 1))
+done
+
+for src in tests/opt/*.txt; do
+  [ -e "$src" ] || continue
+  name=${src%.txt}
+  if [ ! -f "$name.ast" ] || [ ! -f "$name.expected" ]; then
+    report_fail "$src" "missing $name.ast or $name.expected"
+    continue
+  fi
+  check_ast "$src" "$name" --optimize || continue
+  check_run "$src" "$name" "" || continue
+  check_run "$src" "$name" --optimize || continue
+  echo "ok   $src"
+  pass=$((pass + 1))
+done
+
+for session in programs/*.expected; do
+  [ -e "$session" ] || continue
+  name=${session%.expected}
+  src=${name%.*}.txt
+  check_run "$src" "$name" "$flag" "$name.in" || continue
+  echo "ok   $session"
   pass=$((pass + 1))
 done
 
@@ -98,7 +129,7 @@ for src in tests/err/*.txt; do
   fi
   ll=$tmp/err.ll
   rm -f "$ll"
-  out=$(./compiler "$src" "$ll" 2>"$tmp/stderr")
+  out=$(./compiler $flag "$src" "$ll" 2>"$tmp/stderr")
   status=$?
   got=$(cat "$tmp/stderr")
   want=$(cat "$name.expected")

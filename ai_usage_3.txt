@@ -1,0 +1,37 @@
+One Claude Code Opus 5.5 chat for whole assignment:
+---
+
+Read @w10-project-stage3.pdf 
+It requires one mandatory feature from the list - threads and mutexes seem like a fun task. Along with that, I'd like to add fixed-size arrays.
+Lets plan the work needed for the task 1, and what optimizations can be adapted from @w01-practice/ for task 2.
+Propose multiple patterns for using threads, I'll evaluate them and give my decision.
+-> Proposed 4 different thread patterns and 3 mutex patterns - two thread pattern and one mutex patterns selected. The discussion continues in next messages.
+
+---
+
+Option B with a separate spawn block seems interesting, but I don't understand what role would :::::||| keyword play then - there is no specific thread instance definition, so it would be useless. Option D as an extension to this spawn block is also a good idea, though I'd want to hear a bit more on it.
+For arrays: something like: [array kw - one for all] a {::|:::::@50} - 50-size zero-init i32 array / [array kw] a {::|:::::@50@n} - n-init 50-sized array of i32, and as a parameter it would be [array kw]@[array type]@[array size]. Scoped mutexes would be enough for now. For thread races - static check is a more reliable approach and is definitely more correct for the task definition. 
+For indexing - a@i instead of a[i], so it matches the definition
+-> Reworked some keyword ideas, polished array plan. Drafted an implementation plan for the Stage 3.
+
+---
+
+Adapt the optimizations from practice repo to what task 2 requires. Avoid breaking/extending the existing functionality, only work on optimization part.
+-> Applied same optimizations as in practice, along with new Inlining part.
+
+---
+
+Write some sample program for the task 3, utilizing the features made for task 1. Propose multiple ideas, I'll pick one.
+-> Proposed 4 ideas, selected: matrix operation program, located in programs/
+
+---
+
+Update the documentation with the additions made since last commit, check that EBNF is up to date with implementation.
+-> Updated README, added comments in EBNF.
+
+---
+
+The task is almost done, I'm preparing the codebase for commit. Check that there is no .ll, .o, binary files left unignored by git.
+-> Done.
+
+---

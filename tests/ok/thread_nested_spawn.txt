@@ -1,0 +1,32 @@
+// a thread starts threads of its own; the inner and the outer threads all
+// add to one total under the same mutex, called through a helper
+::::||:: m
+:||::::: add (:|:::::: v) ::::::::
+{
+    total = total + v
+}
+:||::::: leaf (::|::::: k) ::::::::
+{
+    ::||||:: m
+    {
+        add(k)
+    }
+}
+:||::::: branch (::|::::: k) ::::::::
+{
+    :||:::||
+    {
+        @3 leaf(@)
+    }
+    ::||||:: m
+    {
+        add(100)
+    }
+}
+||:::::: total {0}
+:||:::||
+{
+    @2 branch(@)
+    leaf(1000)
+}
+|||||||| total

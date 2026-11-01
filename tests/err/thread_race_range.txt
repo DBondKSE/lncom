@@ -1,0 +1,11 @@
+// the threads of a range line all write total without a lock
+:||::::: add (::|::::: k) ::::::::
+{
+    total = total + k
+}
+||:::::: total {0}
+:||:::||
+{
+    @4 add(@)
+}
+|||||||| total

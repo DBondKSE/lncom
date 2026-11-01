@@ -1,0 +1,22 @@
+// worker runs on a thread, so it keeps its body even though it is
+// called once; its helper share is called once inside it and is inlined
+::::||:: m
+:||::::: share (::|::::: k) ::|:::::
+{
+    |:|::::: s {k * 10}
+    |||||||| (s + 1)
+}
+:||::::: worker (::|::::: k) ::::::::
+{
+    ::|::::: v {share(k)}
+    ::||||:: m
+    {
+        total = total + v
+    }
+}
+||:::::: total {0}
+:||:::||
+{
+    @3 worker(@)
+}
+|||||||| total

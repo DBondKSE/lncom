@@ -1,0 +1,20 @@
+Matrix workshop: 3x3 matrices, each row of a product on its own thread
+enter matrix A, 9 numbers row by row:
+enter matrix B, 9 numbers row by row:
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+[1, 0, 0]
+[0, 1, 0]
+[0, 0, 1]
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+A is now A times B
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+[2, 1, 0]
+[0, 2, 1]
+[1, 0, 2]
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+trace of A:
+6
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+multiplications done:
+1
+Program exit with result 6

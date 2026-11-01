@@ -50,6 +50,23 @@ static std::string show(const ExprNode &expr) {
   return chain(show(*f.object), f.links);
 }
 
+static std::string index_text(const ExprNode &index) {
+  if (const IntNode *n = dynamic_cast<const IntNode *>(&index))
+    return n->text;
+  if (const VarNode *v = dynamic_cast<const VarNode *>(&index))
+    return chain(v->name, v->links);
+  return "(...)";
+}
+
+static bool has_thread_index(const ASTNode &node) {
+  if (dynamic_cast<const ThreadIndexNode *>(&node))
+    return true;
+  for (const Child &child : node.children())
+    if (has_thread_index(*child.second))
+      return true;
+  return false;
+}
+
 static std::string called_name(const ExprNode &expr) {
   if (const CallNode *c = dynamic_cast<const CallNode *>(&expr))
     return c->name;
@@ -111,6 +128,11 @@ const DeclNode &SemanticChecker::root(const std::string &name,
                                       const ASTNode &at) {
   if (const DeclNode *decl = find(name))
     return *decl;
+  if (spawn_results.count(name))
+    error(at.line, at.col,
+          "'" + name +
+              "' is the result of a thread of this spawn block, it can be "
+              "used after the block");
   if (is_own_field(name)) {
     links.insert(links.begin(), Link{name, at.col});
     return *current_member->self;
@@ -206,6 +228,8 @@ void SemanticChecker::spread_uses() {
 
 void SemanticChecker::note_call(const FnNode &fn, const std::string &name,
                                 const ASTNode &at) {
+  edges.push_back({current_fn, &fn, held, &at == spawn_call, name, at.line,
+                   at.col});
   if (current_fn) {
     calls[current_fn].insert(&fn);
     return;
@@ -289,6 +313,9 @@ void SemanticChecker::check_assignable(const ExprNode &expr,
 void SemanticChecker::visit_program(ProgramNode &node) {
   for (std::unique_ptr<StructNode> &s : node.structs)
     s->accept(*this);
+  for (std::unique_ptr<MutexNode> &m : node.mutexes)
+    if (!mutexes.emplace(m->name, m.get()).second)
+      error(m->line, m->col, "mutex '" + m->name + "' is already declared");
   for (std::unique_ptr<StructNode> &s : node.structs)
     for (std::unique_ptr<MemberFnNode> &m : s->methods)
       declare_params(*m);
@@ -310,6 +337,8 @@ void SemanticChecker::visit_program(ProgramNode &node) {
     stmt->accept(*this);
   node.exit->accept(*this);
   scopes.pop_back();
+  check_locks();
+  check_races();
 }
 
 void SemanticChecker::visit_struct(StructNode &node) {
@@ -390,16 +419,35 @@ void SemanticChecker::check_body(FnNode &node) {
 }
 
 void SemanticChecker::visit_decl(DeclNode &node) {
+  check_decl(node);
+  declare_var(node);
+}
+
+void SemanticChecker::check_decl(DeclNode &node) {
   node.struct_type = resolve_type(node.type_name, node.is_struct, node.line,
                                   node.type_col);
-  if (scopes.back().count(node.name))
+  if (scopes.back().count(node.name) || spawn_results.count(node.name))
     error(node.line, node.col,
           "variable '" + node.name + "' is already declared" +
               (scopes.size() > 1 ? " in this block" : ""));
   InitNode &init = *node.init;
   init.type = node.type_name;
   init.struct_type = node.struct_type;
-  if (node.struct_type) {
+  if (node.type_name == "array") {
+    check_count(init, 1);
+    ExprNode &value = *init.values[0];
+    if (as_init(value))
+      error(value.line, value.col,
+            "cannot initialise array '" + node.name + "' with {}");
+    const std::string &type = check(value);
+    if (!is_array_type(type))
+      error(node.line, node.col,
+            "cannot initialise array '" + node.name +
+                "' with a value of type " + type);
+    node.type_name = type;
+    init.type = type;
+    init.copy = true;
+  } else if (node.struct_type) {
     check(init);
   } else {
     check_count(init, 1);
@@ -408,6 +456,9 @@ void SemanticChecker::visit_decl(DeclNode &node) {
       check(value);
     check_value(value, node.type_name, nullptr, node, "'" + node.name + "'");
   }
+}
+
+void SemanticChecker::declare_var(DeclNode &node) {
   scopes.back()[node.name] = &node;
   if (!current_fn && scopes.size() == 1)
     declared.insert(&node);
@@ -447,6 +498,8 @@ void SemanticChecker::visit_init(InitNode &node) {
 
 void SemanticChecker::visit_assign(AssignNode &node) {
   std::string target = chain(node.name, node.links);
+  if (node.index)
+    target += "@" + index_text(*node.index);
   std::string object = node.links.empty() ? "it" : "'" + node.name + "'";
   const DeclNode &decl = root(node.name, node.links, node);
   if (dynamic_cast<const ParamNode *>(&decl))
@@ -460,8 +513,18 @@ void SemanticChecker::visit_assign(AssignNode &node) {
     current_member->mutating = true;
   node.decl = &decl;
   node.type = field ? field->type_name : decl.type_name;
+  if (decl.global)
+    record(decl, true, nullptr, node);
+  if (node.index) {
+    if (!is_array_type(node.type))
+      error(node.line, node.index_col,
+            "'" + chain(node.name, node.links) + "' of type " + node.type +
+                " is not an array");
+    check_index(*node.index, node.type);
+    node.type = element_type(node.type);
+  }
   const StructNode *replaced = field ? field->struct_type : decl.struct_type;
-  if (replaced) {
+  if (replaced && !node.index) {
     std::string inner = const_field(*replaced);
     if (!inner.empty())
       error(node.line, node.col,
@@ -556,6 +619,8 @@ void SemanticChecker::visit_var(VarNode &node) {
   const FieldNode *field =
       resolve_links(*node.decl, node.links, node.line, false);
   node.type = field ? field->type_name : node.decl->type_name;
+  if (node.decl->global)
+    record(*node.decl, false, nullptr, node);
 }
 
 void SemanticChecker::check_args(std::vector<std::unique_ptr<ExprNode>> &args,
@@ -617,6 +682,8 @@ void SemanticChecker::visit_member_call(MemberCallNode &node) {
   node.type = node.fn->result_type;
   if (!object)
     return;
+  if (object->decl->global)
+    record(*object->decl, false, node.fn, node);
   if (is_self(*object->decl))
     current_member->self_calls.push_back(node.fn);
   std::string blocker = const_link(*object);
@@ -656,6 +723,246 @@ void SemanticChecker::visit_print(PrintNode &node) {
   if (!node.value)
     return;
   const std::string &type = check(*node.value);
-  if (!is_builtin(type))
+  if (!is_builtin(type) && !is_array_type(type))
     node.struct_type = structs.at(type);
+}
+
+void SemanticChecker::visit_array(ArrayNode &node) {
+  node.type = array_type(node.element, node.size);
+  if (!node.fill)
+    return;
+  check(*node.fill);
+  check_assignable(*node.fill, node.element, *node.fill,
+                   "fill an array of " + node.element);
+}
+
+void SemanticChecker::check_index(ExprNode &index, const std::string &array) {
+  const std::string &type = check(index);
+  if (!is_integer(type))
+    error(index.line, index.col,
+          "an array index must be an integer, got " + type);
+  const IntNode *literal = dynamic_cast<const IntNode *>(&index);
+  if (literal && (uint64_t)literal->value >= array_size(array))
+    error(literal->line, literal->col,
+          "index " + literal->text + " is out of range for an array of " +
+              std::to_string(array_size(array)));
+}
+
+void SemanticChecker::visit_index(IndexNode &node) {
+  const std::string &type = check(*node.array);
+  if (!is_array_type(type))
+    error(node.line, node.col,
+          "'" + show(*node.array) + "' of type " + type + " is not an array");
+  check_index(*node.index, type);
+  node.type = element_type(type);
+}
+
+void SemanticChecker::visit_thread_index(ThreadIndexNode &node) {
+  if (!index_allowed)
+    error(node.line, node.col,
+          "'@' stands alone as an argument of a range line in a spawn block");
+  node.type = "i32";
+}
+
+void SemanticChecker::record(const DeclNode &decl, bool write,
+                             const MemberFnNode *via, const ASTNode &at) {
+  if (current_fn)
+    accesses.push_back({&decl, write, via, current_fn, held, at.line, at.col});
+}
+
+const CallNode &SemanticChecker::spawned(StmtNode &line, Spawn &spawn) {
+  const CallNode *call;
+  bool range = false;
+  if (DeclNode *decl = dynamic_cast<DeclNode *>(&line)) {
+    call = static_cast<CallNode *>(decl->init->values[0].get());
+    spawn_call = call;
+    check_decl(*decl);
+    spawn_results[decl->name] = decl;
+  } else if (CallStmtNode *stmt = dynamic_cast<CallStmtNode *>(&line)) {
+    call = static_cast<CallNode *>(stmt->call.get());
+    spawn_call = call;
+    stmt->call->accept(*this);
+  } else {
+    RangeNode &node = static_cast<RangeNode &>(line);
+    call = node.call.get();
+    node.accept(*this);
+    range = true;
+  }
+  spawn_call = nullptr;
+  if (const MemberFnNode *m = dynamic_cast<const MemberFnNode *>(call->fn))
+    error(call->line, call->col,
+          "a spawn line calls a function of the program, '" + call->name +
+              "' is a member function of struct '" + m->owner->name + "'");
+  spawn.lines.push_back({call->fn, range});
+  return *call;
+}
+
+void SemanticChecker::visit_spawn(SpawnNode &node) {
+  Spawn spawn{&node, {}};
+  for (std::unique_ptr<StmtNode> &line : node.lines)
+    spawned(*line, spawn);
+  std::map<std::string, const DeclNode *> results;
+  results.swap(spawn_results);
+  for (std::unique_ptr<StmtNode> &line : node.lines)
+    if (DeclNode *decl = dynamic_cast<DeclNode *>(line.get()))
+      declare_var(*decl);
+  spawns.push_back(spawn);
+}
+
+void SemanticChecker::visit_range(RangeNode &node) {
+  const std::string &type = check(*node.count);
+  if (!is_integer(type))
+    error(node.count->line, node.count->col,
+          "the thread count of a range line must be an integer, got " + type);
+  const IntNode *literal = dynamic_cast<const IntNode *>(node.count.get());
+  if (literal && (literal->value < 1 || literal->value > 1024))
+    error(literal->line, literal->col,
+          "a range line starts 1 to 1024 threads, got " + literal->text);
+  CallNode &call = *node.call;
+  bool passed = false;
+  for (std::unique_ptr<ExprNode> &arg : call.args) {
+    if (dynamic_cast<ThreadIndexNode *>(arg.get()))
+      passed = true;
+    else if (has_thread_index(*arg))
+      error(arg->line, arg->col,
+            "'@' stands alone as an argument of a range line in a spawn "
+            "block");
+  }
+  if (!passed)
+    error(call.line, call.col,
+          "a range line passes '@', the thread index, as an argument of '" +
+              call.name + "'");
+  spawn_call = &call;
+  index_allowed = true;
+  call.accept(*this);
+  index_allowed = false;
+}
+
+void SemanticChecker::visit_lock(LockNode &node) {
+  auto it = mutexes.find(node.name);
+  if (it == mutexes.end())
+    error(node.line, node.name_col,
+          "mutex '" + node.name + "' is not declared");
+  node.mutex = it->second;
+  if (held.count(node.mutex))
+    error(node.line, node.col,
+          "mutex '" + node.name +
+              "' is already locked here, locking it again would wait "
+              "forever");
+  locks[current_fn].insert(node.mutex);
+  held.insert(node.mutex);
+  node.body->accept(*this);
+  held.erase(node.mutex);
+}
+
+void SemanticChecker::check_locks() const {
+  std::map<const FnNode *, Held> taken = locks;
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (const Edge &e : edges) {
+      if (!e.caller)
+        continue;
+      for (const MutexNode *m : taken[e.callee])
+        if (taken[e.caller].insert(m).second)
+          changed = true;
+    }
+  }
+  for (const Edge &e : edges)
+    for (const MutexNode *m : taken[e.callee])
+      if (e.held.count(m))
+        error(e.line, e.col,
+              "'" + e.name + "' locks mutex '" + m->name +
+                  "', which is already locked here, it would wait forever");
+}
+
+std::map<const FnNode *, SemanticChecker::Held>
+SemanticChecker::reach(const FnNode *root) const {
+  std::map<const FnNode *, Held> entry = {{root, {}}};
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (const Edge &e : edges) {
+      auto from = entry.find(e.caller);
+      if (!e.caller || from == entry.end())
+        continue;
+      Held held;
+      if (!e.spawn) {
+        held = from->second;
+        held.insert(e.held.begin(), e.held.end());
+      }
+      auto to = entry.find(e.callee);
+      if (to == entry.end()) {
+        entry[e.callee] = held;
+        changed = true;
+        continue;
+      }
+      Held common;
+      for (const MutexNode *m : to->second)
+        if (held.count(m))
+          common.insert(m);
+      if (common != to->second) {
+        to->second = common;
+        changed = true;
+      }
+    }
+  }
+  return entry;
+}
+
+void SemanticChecker::check_races() const {
+  for (const Spawn &spawn : spawns) {
+    std::vector<std::map<const FnNode *, Held>> threads;
+    for (const auto &line : spawn.lines)
+      threads.push_back(reach(line.first));
+    std::vector<const DeclNode *> order;
+    std::map<const DeclNode *, std::set<size_t>> users, writers;
+    for (const Access &a : accesses)
+      for (size_t i = 0; i < threads.size(); i++) {
+        if (!threads[i].count(a.fn))
+          continue;
+        if (users[a.global].empty())
+          order.push_back(a.global);
+        users[a.global].insert(i);
+        if (a.write || (a.via && a.via->mutating))
+          writers[a.global].insert(i);
+      }
+    for (const DeclNode *global : order) {
+      bool shared = false;
+      for (size_t i : writers[global])
+        shared = shared || spawn.lines[i].second || users[global].size() > 1;
+      if (!shared)
+        continue;
+      bool first = true;
+      Held common;
+      for (const Access &a : accesses) {
+        if (a.global != global)
+          continue;
+        for (size_t i = 0; i < threads.size(); i++) {
+          auto entry = threads[i].find(a.fn);
+          if (entry == threads[i].end())
+            continue;
+          Held guards = a.held;
+          guards.insert(entry->second.begin(), entry->second.end());
+          if (guards.empty())
+            error(a.line, a.col,
+                  "global '" + global->name +
+                      "' is written by a thread of the spawn block at line " +
+                      where(*spawn.node) +
+                      " while another thread uses it, use it inside a lock");
+          Held both;
+          for (const MutexNode *m : guards)
+            if (first || common.count(m))
+              both.insert(m);
+          if (both.empty())
+            error(a.line, a.col,
+                  "the threads of the spawn block at line " +
+                      where(*spawn.node) + " use global '" + global->name +
+                      "' under different mutexes, they need one in common");
+          common = both;
+          first = false;
+        }
+      }
+    }
+  }
 }

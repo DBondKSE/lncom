@@ -1,0 +1,7 @@
+// a spawn block holds calls, not assignments
+|:|::::: x {0}
+:||:::||
+{
+    x = 1
+}
+|||||||| 0

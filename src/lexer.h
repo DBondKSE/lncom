@@ -13,6 +13,7 @@ enum tok_kind {
   TK_PAREN,
   TK_COMMA,
   TK_DOT,
+  TK_AT,
   TK_STRING,
   TK_NEWLINE,
   TK_EOF
@@ -23,12 +24,16 @@ enum key_value {
   KEY_TRUE = 0b00000001,
   KEY_BOOL = 0b00000010,
   KEY_STRUCT = 0b00000110,
+  KEY_ARRAY = 0b00001010,
+  KEY_MUTEX = 0b00001100,
   KEY_ELSE = 0b00001111,
   KEY_I32 = 0b00100000,
+  KEY_LOCK = 0b00111100,
   KEY_I64 = 0b01000000,
   KEY_FN = 0b01100000,
   KEY_READ = 0b01100001,
   KEY_PRINT = 0b01100010,
+  KEY_SPAWN = 0b01100011,
   KEY_MUT = 0b10000000,
   KEY_WHILE = 0b10101010,
   KEY_IF = 0b11110000,
@@ -50,6 +55,8 @@ std::string key_name(int key);
 bool is_type_key(int key);
 bool is_mut_key(int key);
 bool is_struct_key(int key);
+bool is_array_key(int key);
+bool is_builtin_key(int key);
 std::string type_name(int key);
 
 std::string describe(const token &tok);

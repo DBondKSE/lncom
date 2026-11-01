@@ -30,6 +30,8 @@ class Parser {
 
   std::vector<std::unique_ptr<ExprNode>> parse_args();
   std::unique_ptr<ExprNode> parse_chain();
+  std::unique_ptr<ExprNode> parse_index();
+  std::string parse_array_shape(const token &element);
   std::unique_ptr<ExprNode> parse_factor();
   std::unique_ptr<ExprNode> parse_term();
   std::unique_ptr<ExprNode> parse_arith();
@@ -43,7 +45,12 @@ class Parser {
   std::unique_ptr<StmtNode> parse_if();
   std::unique_ptr<StmtNode> parse_print();
   std::unique_ptr<StmtNode> parse_chain_stmt();
+  std::unique_ptr<StmtNode> parse_spawn();
+  std::unique_ptr<StmtNode> parse_spawn_line();
+  std::unique_ptr<StmtNode> parse_lock();
+  std::unique_ptr<MutexNode> parse_mutex_decl();
   parsed_type parse_type(const std::string &expected);
+  void require_array_shape(const parsed_type &type, const std::string &what);
   std::unique_ptr<InitNode> parse_init(const token &open,
                                        const std::string &close);
   std::unique_ptr<ExprNode> parse_value();

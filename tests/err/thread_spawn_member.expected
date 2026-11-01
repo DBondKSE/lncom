@@ -1,0 +1,1 @@
+compilation error: line 9:13: a spawn line calls a function of the program, 'go' is a member function of struct 'P'

@@ -1,0 +1,1 @@
+compilation error: line 9:19: 'a' is the result of a thread of this spawn block, it can be used after the block
