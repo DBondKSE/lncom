@@ -1,0 +1,10 @@
+// a range line passes '@' to the function it calls
+:||::::: f (::|::::: k) ::::::::
+{
+    :||:::|: k
+}
+:||:::||
+{
+    @2 f(1)
+}
+|||||||| 0

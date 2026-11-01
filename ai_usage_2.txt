@@ -1,0 +1,44 @@
+One Claude Code Opus 5.5 chat for whole assignment:
+---
+
+Read @w07-project-stage2.pdf 
+Based on work in @w01-practice help me extend my language with additional functionality.
+First, let's discuss the code that can be adapted from practice repo into my language and what functionality will need its own implementation.
+Also, I want to discuss the keyword updates with new binary combinations of :/| for new features.
+-> Most of the work can be adapted with some changes from practice language, Claude proposed its own idea of new keys, rejected.
+
+---
+
+My idea for the keys:
+struct - :::::||:
+fn - :||:::::
+read - :||::::|
+print - :||:::|:
+return - not a separate, just reuse exit ||||||||
+Also, a question to your version of design - does |::::::| for struct imply that it is always mutable?
+-> Checked for availability, reviewed the rejected version of struct keyword, proposed :::::||:/|::::||: for const/mut structs, approved. Further discussed function definition structure and global/local variable problem.
+
+---
+
+I like fn name (params) result, but with one note - void return would be :||::::: n() ::::::::
+-> Established the final vesrion of function declaration
+
+---
+
+I'd actually prefer globals to be visible - thet seems like the correct way
+-> Chosen one of two ideas provided by Claude
+
+---
+
+Adapt the codegen and semantic from practice repo, cover with tests and report
+-> The two easiest-to-adapt fields, done and covered
+
+---
+
+Review the staged files and do task 4 of the file - write enough test cases to cover the new functionality
+-> 30/72 new valid/invalid programs
+
+---
+
+Update README.md with new functionality description, in the same style as already present.
+-> Updated README.md

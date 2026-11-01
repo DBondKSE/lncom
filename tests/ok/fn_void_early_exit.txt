@@ -1,0 +1,13 @@
+// a function that returns nothing may leave early with a bare exit, or run to its end
+:||::::: show (::|::::: n) ::::::::
+{
+    ||||:::: n == 0
+    {
+        :||:::|: "zero"
+        ||||||||
+    }
+    :||:::|: n
+}
+show(0)
+show(5)
+|||||||| 0

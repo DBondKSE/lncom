@@ -1,0 +1,24 @@
+Matrix workshop: 3x3 matrices, each row of a product on its own thread
+enter matrix A, 9 numbers row by row:
+enter matrix B, 9 numbers row by row:
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+sum of A, sum of B:
+45
+9
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+A is now A times B
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+A is now A times B
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+[18, 18, 18]
+[45, 45, 45]
+[72, 72, 72]
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+unknown command
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+trace of A:
+135
+command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):
+multiplications done:
+2
+Program exit with result 135

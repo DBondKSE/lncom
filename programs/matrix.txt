@@ -1,0 +1,140 @@
+// Matrix workshop: 3x3 matrices of whole numbers. A product is computed
+// with one thread per row, and the two sums run on two threads at once.
+:::::||: Matrix
+{
+    |:::|:|:@:|::::::@9 cells
+
+    :||::::: at (::|::::: r, ::|::::: c) :|::::::
+    {
+        |||||||| cells@(r * 3 + c)
+    }
+
+    :||::::: show () ::::::::
+    {
+        |:|::::: r {0}
+        |:|:|:|: r != 3
+        {
+            |:::|:|: line {:|::::::@3}
+            |:|::::: c {0}
+            |:|:|:|: c != 3
+            {
+                line@c = at(r, c)
+                c = c + 1
+            }
+            :||:::|: line
+            r = r + 1
+        }
+    }
+
+    :||::::: trace () :|::::::
+    {
+        |||||||| (at(0, 0) + at(1, 1) + at(2, 2))
+    }
+}
+
+::::||:: guard
+
+:||::::: fill () ::::|:|:@:|::::::@9
+{
+    |:::|:|: xs {:|::::::@9}
+    |:|::::: i {0}
+    |:|:|:|: i != 9
+    {
+        xs@i = :||::::|
+        i = i + 1
+    }
+    |||||||| xs
+}
+
+:||::::: row (::|::::: r) ::::::::
+{
+    |:|::::: c {0}
+    |:|:|:|: c != 3
+    {
+        ||:::::: s {0}
+        |:|::::: k {0}
+        |:|:|:|: k != 3
+        {
+            s = s + a.at(r, k) * b.at(k, c)
+            k = k + 1
+        }
+        ::||||:: guard
+        {
+            product.cells@(r * 3 + c) = s
+        }
+        c = c + 1
+    }
+}
+
+:||::::: total (:::::||: Matrix m) :|::::::
+{
+    ||:::::: s {0}
+    |:|::::: i {0}
+    |:|:|:|: i != 9
+    {
+        s = s + m.cells@i
+        i = i + 1
+    }
+    |||||||| s
+}
+
+:||:::|: "Matrix workshop: 3x3 matrices, each row of a product on its own thread"
+:||:::|: "enter matrix A, 9 numbers row by row:"
+|::::||: Matrix a {fill()}
+:||:::|: "enter matrix B, 9 numbers row by row:"
+:::::||: Matrix b {fill()}
+|::::||: Matrix product {:|::::::@9}
+|:|::::: rounds {0}
+:||:::|: "command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):"
+|:|::::: cmd {:||::::|}
+|:|:|:|: cmd != 0
+{
+    ||||:::: cmd == 1
+    {
+        :||:::||
+        {
+            @3 row(@)
+        }
+        a = product
+        rounds = rounds + 1
+        :||:::|: "A is now A times B"
+    }
+    ::::||||
+    {
+        ||||:::: cmd == 2
+        {
+            a.show()
+        }
+        ::::||||
+        {
+            ||||:::: cmd == 3
+            {
+                :||:::|: "trace of A:"
+                :||:::|: a.trace()
+            }
+            ::::||||
+            {
+                ||||:::: cmd == 4
+                {
+                    :||:::||
+                    {
+                        :|:::::: sa {total(a)}
+                        :|:::::: sb {total(b)}
+                    }
+                    :||:::|: "sum of A, sum of B:"
+                    :||:::|: sa
+                    :||:::|: sb
+                }
+                ::::||||
+                {
+                    :||:::|: "unknown command"
+                }
+            }
+        }
+    }
+    :||:::|: "command (1 multiply A by B, 2 show A, 3 trace of A, 4 sums, 0 quit):"
+    cmd = :||::::|
+}
+:||:::|: "multiplications done:"
+:||:::|: rounds
+|||||||| a.trace()

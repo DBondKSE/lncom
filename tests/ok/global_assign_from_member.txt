@@ -1,0 +1,15 @@
+// assigning a global does not make a member function mutating
+:::::||: Logger
+{
+    ::|::::: step
+
+    :||::::: log () ::::::::
+    {
+        count = count + step
+    }
+}
+|:|::::: count {0}
+:::::||: Logger l {5}
+l.log()
+l.log()
+|||||||| count

@@ -1,0 +1,1 @@
+compilation error: line 3:1: cannot assign to 'a@1': it is not mut

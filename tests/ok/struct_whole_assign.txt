@@ -1,0 +1,11 @@
+// a whole object is replaced when every field is mut
+:::::||: Point
+{
+    |:|::::: x
+    |:|::::: y
+}
+|::::||: Point p {1, 2}
+:::::||: Point q {3, 4}
+p = q
+:||:::|: p
+|||||||| p.y

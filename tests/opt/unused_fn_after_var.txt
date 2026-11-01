@@ -1,0 +1,14 @@
+// the only call of square stands in an unused declaration: the variable
+// goes first, then square has no calls left and goes too
+:||::::: square (::|::::: n) ::|:::::
+{
+    |||||||| (n * n)
+}
+:||::::: show (::|::::: n) ::::::::
+{
+    :||:::|: n
+}
+::|::::: unused {square(9)}
+show(1)
+show(2)
+|||||||| 3

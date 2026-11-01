@@ -1,0 +1,14 @@
+// the course example: an object built from read, and a member function
+:::::||: Point
+{
+    ::|::::: x
+    ::|::::: y
+
+    :||::::: d2 () ::|:::::
+    {
+        ::|::::: r {x * x + y * y}
+        |||||||| r
+    }
+}
+:::::||: Point p {:||::::|, :||::::|}
+|||||||| p.d2()

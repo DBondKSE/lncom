@@ -1,0 +1,4 @@
+// a mutex is declared at the top level, not as a statement
+::|::::: x {1}
+::::||:: m
+|||||||| 0

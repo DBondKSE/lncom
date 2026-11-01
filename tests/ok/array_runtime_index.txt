@@ -1,0 +1,7 @@
+// an index outside the array, known only at run time, stops the program
+|:::|:|: a {::|:::::@4}
+::|::::: i {:||::::|}
+a@1 = 3
+:||:::|: a@1
+:||:::|: a@i
+|||||||| 0

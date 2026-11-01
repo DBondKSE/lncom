@@ -1,0 +1,3 @@
+// a constant index outside the array is a compile error
+::::|:|: a {::|:::::@4}
+|||||||| a@4

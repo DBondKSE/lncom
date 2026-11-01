@@ -1,0 +1,1 @@
+compilation error: line 1:13: a parameter is a constant, its type takes a plain type key, not '|:|:::::' (i32 mut)

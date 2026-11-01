@@ -1,0 +1,25 @@
+// an array field is set with an array value and written through the chain
+:::::||: Board
+{
+    |:::|:|:@::::::|:@3 marks
+    ::|::::: size
+    :||::::: count () ::|:::::
+    {
+        |:|::::: n {0}
+        |:|::::: i {0}
+        |:|:|:|: i != size
+        {
+            ||||:::: marks@i
+            {
+                n = n + 1
+            }
+            i = i + 1
+        }
+        |||||||| n
+    }
+}
+|::::||: Board b {::::::|:@3, 3}
+b.marks@1 = :::::::|
+b.marks@2 = :::::::|
+:||:::|: b
+|||||||| b.count()

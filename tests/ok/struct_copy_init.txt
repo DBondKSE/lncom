@@ -1,0 +1,11 @@
+// one object of the same struct copies it, later changes do not reach the copy
+:::::||: Point
+{
+    |:|::::: x
+    |:|::::: y
+}
+|::::||: Point p {1, 2}
+:::::||: Point q {p}
+p.x = 100
+:||:::|: q
+|||||||| p.x

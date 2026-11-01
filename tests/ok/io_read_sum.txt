@@ -1,0 +1,7 @@
+// read takes integers from the standard input, print writes a line each
+::|::::: a {:||::::|}
+::|::::: b {:||::::|}
+:||:::|: "sum:"
+:||:::|: a + b
+:||:::|: a == b
+|||||||| 0

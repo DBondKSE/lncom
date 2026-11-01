@@ -1,0 +1,1 @@
+compilation error: line 1:1: a struct cannot be named 'i32', it is a built-in type

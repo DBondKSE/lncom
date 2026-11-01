@@ -1,0 +1,3 @@
+// mutability belongs to the array key, not to the element type
+::::|:|: a {|:|:::::@4}
+|||||||| 0

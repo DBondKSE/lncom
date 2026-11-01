@@ -1,0 +1,11 @@
+// b's argument is a's result, which is ready only after the block
+:||::::: f (::|::::: k) ::|:::::
+{
+    |||||||| k
+}
+:||:::||
+{
+    ::|::::: a {f(1)}
+    ::|::::: b {f(a)}
+}
+|||||||| 0

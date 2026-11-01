@@ -1,0 +1,40 @@
+// report is inlined into run, then run into the top level; sign leaves
+// through exit inside an if, fact calls itself and below stands in a
+// while condition, so these three stay
+:||::::: report (:|:::::: n) ::::::::
+{
+    :||:::|: "value:"
+    :||:::|: n
+}
+:||::::: sign (::|::::: n) ::|:::::
+{
+    ||||:::: n == 0
+    {
+        |||||||| 0
+    }
+    |||||||| 1
+}
+:||::::: fact (::|::::: n) :|::::::
+{
+    ||||:::: n == 0
+    {
+        |||||||| 1
+    }
+    |||||||| (n * fact(n - 1))
+}
+:||::::: below (::|::::: i) ::::::|:
+{
+    |||||||| (i != 3)
+}
+:||::::: run (:|:::::: n) ::::::::
+{
+    report(n)
+}
+|:|::::: i {0}
+|:|:|:|: below(i)
+{
+    i = i + 1
+}
+run(fact(5))
+:||:::|: sign(i)
+|||||||| i

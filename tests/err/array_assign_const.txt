@@ -1,0 +1,4 @@
+// the elements of an array declared with the plain key are constants
+::::|:|: a {::|:::::@4}
+a@1 = 2
+|||||||| 0

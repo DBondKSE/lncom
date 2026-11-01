@@ -1,0 +1,18 @@
+// inner locks m, and outer calls it while it holds m
+::::||:: m
+:||::::: inner () ::::::::
+{
+    ::||||:: m
+    {
+        :||:::|: 1
+    }
+}
+:||::::: outer () ::::::::
+{
+    ::||||:: m
+    {
+        inner()
+    }
+}
+outer()
+|||||||| 0

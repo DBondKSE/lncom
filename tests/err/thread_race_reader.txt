@@ -1,0 +1,20 @@
+// one thread writes total under the lock, the other reads it without one
+::::||:: m
+:||::::: add (::|::::: k) ::::::::
+{
+    ::||||:: m
+    {
+        total = total + k
+    }
+}
+:||::::: peek () :|::::::
+{
+    |||||||| total
+}
+||:::::: total {0}
+:||:::||
+{
+    add(1)
+    :|:::::: seen {peek()}
+}
+|||||||| total

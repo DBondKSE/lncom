@@ -1,0 +1,1 @@
+compilation error: line 1:1: a struct is declared with the plain struct key, mutability belongs to its fields and objects

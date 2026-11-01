@@ -1,0 +1,9 @@
+// a function assigns a mutable global declared below it
+:||::::: tick () ::::::::
+{
+    calls = calls + 1
+}
+|:|::::: calls {0}
+tick()
+tick()
+|||||||| calls

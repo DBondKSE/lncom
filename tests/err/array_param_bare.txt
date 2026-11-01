@@ -1,0 +1,6 @@
+// a parameter writes the element type and the size of its array
+:||::::: f (::::|:|: xs) ::::::::
+{
+    :||:::|: 1
+}
+|||||||| 0

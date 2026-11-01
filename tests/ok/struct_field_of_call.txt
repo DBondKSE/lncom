@@ -1,0 +1,23 @@
+// a field of a call result, and a chain through it
+:::::||: Point
+{
+    ::|::::: x
+    ::|::::: y
+}
+:::::||: Box
+{
+    :::::||: Point corner
+}
+:||::::: origin () :::::||: Point
+{
+    :::::||: Point p {7, 8}
+    |||||||| p
+}
+:||::::: box () :::::||: Box
+{
+    :::::||: Box b {{1, 2}}
+    |||||||| b
+}
+:||:::|: origin().y
+:||:::|: box().corner
+|||||||| box().corner.x

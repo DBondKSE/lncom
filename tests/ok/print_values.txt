@@ -1,0 +1,13 @@
+// print writes an integer, a bool, a string or an object, then a newline
+:::::||: Pair
+{
+    ::::::|: ok
+    :|:::::: big
+}
+:||:::|: 42
+:||:::|: 5000000000
+:||:::|: ::::::::
+:||:::|: "text with :|:||||| and // inside"
+:::::||: Pair p {:::::::|, 9000000000}
+:||:::|: p
+|||||||| 0

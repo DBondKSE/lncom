@@ -1,0 +1,24 @@
+// each thread gets its own copy of the array: doubling it inside the thread
+// does not change the caller's array, and the result comes back as a copy
+:||::::: doubled (::::|:|:@::|:::::@4 xs) ::::|:|:@::|:::::@4
+{
+    |:::|:|: r {xs}
+    |:|::::: i {0}
+    |:|:|:|: i != 4
+    {
+        r@i = r@i * 2
+        i = i + 1
+    }
+    |||||||| r
+}
+|:::|:|: xs {::|:::::@4@3}
+xs@2 = 10
+:||:::||
+{
+    ::::|:|: a {doubled(xs)}
+    ::::|:|: b {doubled(::|:::::@4@1)}
+}
+:||:::|: xs
+:||:::|: a
+:||:::|: b
+|||||||| a@2

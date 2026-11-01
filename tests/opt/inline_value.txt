@@ -1,0 +1,13 @@
+// area is called once: its parameters become declarations initialised
+// with the arguments, its local s is renamed so it cannot collide with
+// the caller's s, and its exit value stands where the call stood
+:||::::: area (::|::::: w, ::|::::: h) :|::::::
+{
+    ||:::::: s {w * h}
+    |||||||| (s + 1)
+}
+::|::::: s {:||::::|}
+:|:::::: total {area(s, 3)}
+:||:::|: total
+:||:::|: s
+|||||||| total

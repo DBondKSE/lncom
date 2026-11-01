@@ -1,0 +1,3 @@
+// an array holds at least one element
+::::|:|: a {::|:::::@0}
+|||||||| 0

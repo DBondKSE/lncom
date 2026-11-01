@@ -1,0 +1,21 @@
+// a call result is a temporary copy: any member function may be called on it
+:::::||: Point
+{
+    |:|::::: x
+    |:|::::: y
+
+    :||::::: moved (::|::::: d) :::::||: Point
+    {
+        :::::||: Point q {x + d, y}
+        |||||||| q
+    }
+
+    :||::::: shift (::|::::: d) ::|:::::
+    {
+        x = x + d
+        |||||||| x
+    }
+}
+:::::||: Point p {1, 2}
+:||:::|: p.moved(1).shift(2)
+|||||||| p.x

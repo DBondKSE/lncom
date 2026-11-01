@@ -1,0 +1,12 @@
+:::::||: Point
+{
+    |:|::::: x
+}
+:::::||: Circle
+{
+    :::::||: Point center
+}
+|::::||: Circle c {{1}}
+// c is mut and x is mut, but center is not
+c.center.x = 2
+|||||||| c.center.x

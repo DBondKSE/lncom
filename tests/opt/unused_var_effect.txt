@@ -1,0 +1,26 @@
+// read and a printing call keep their declarations; quiet prints nothing,
+// so its results are dropped; the global last is only written, so it goes
+// together with the assignment inside remember
+:||::::: loud (::|::::: v) ::|:::::
+{
+    :||:::|: v
+    |||||||| v
+}
+:||::::: quiet (::|::::: v) ::|:::::
+{
+    |||||||| (v * 2)
+}
+:||::::: remember (::|::::: v) ::::::::
+{
+    last = v
+}
+|:|::::: last {0}
+::|::::: input {:||::::|}
+::|::::: shown {loud(3)}
+::|::::: again {loud(4)}
+::|::::: hidden {quiet(4)}
+|:::|:|: cells {::|:::::@4}
+cells@1 = quiet(1)
+remember(1)
+remember(2)
+|||||||| 7

@@ -1,0 +1,18 @@
+// arrays are zero-filled or filled with a value; elements are read and
+// written with '@', by a constant or by a variable
+|:::|:|: a {::|:::::@5}
+::|::::: n {7}
+::::|:|: b {:|::::::@3@n}
+::::|:|: flags {::::::|:@2@:::::::|}
+a@0 = 1
+|:|::::: i {1}
+|:|:|:|: i != 5
+{
+    a@i = a@(i - 1) * 2
+    i = i + 1
+}
+:||:::|: a
+:||:::|: b
+:||:::|: flags
+:||:::|: a@4 + b@1
+|||||||| a@3

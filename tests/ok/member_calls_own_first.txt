@@ -1,0 +1,24 @@
+// inside a member function f() finds a member function of the same struct first
+:::::||: Acc
+{
+    |:|::::: total
+
+    :||::::: add (::|::::: k) ::::::::
+    {
+        total = total + k
+    }
+
+    :||::::: add_twice (::|::::: k) ::::::::
+    {
+        add(k)
+        add(k)
+    }
+}
+:||::::: add (::|::::: k) ::::::::
+{
+    :||:::|: "global add"
+}
+|::::||: Acc a {0}
+a.add_twice(5)
+add(1)
+|||||||| a.total

@@ -1,0 +1,16 @@
+// an i32 widens to i64 in a declaration, an assignment, an argument and a result
+:||::::: twice (:|:::::: n) :|::::::
+{
+    ::|::::: two {2}
+    |||||||| (n * two)
+}
+:||::::: one () :|::::::
+{
+    |||||||| 1
+}
+::|::::: small {2000000000}
+||:::::: big {small}
+big = big + small
+:|:::::: r {twice(small)}
+:||:::|: big
+|||||||| (r + one())

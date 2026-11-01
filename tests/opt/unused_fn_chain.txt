@@ -1,0 +1,22 @@
+// top calls mid, mid calls low: nobody calls top, so all three go,
+// one per round; used stays
+:||::::: low (::|::::: n) ::|:::::
+{
+    |||||||| (n + 1)
+}
+:||::::: mid (::|::::: n) ::|:::::
+{
+    |||||||| low(n)
+}
+:||::::: top () ::|:::::
+{
+    |||||||| mid(1)
+}
+:||::::: used (::|::::: n) ::|:::::
+{
+    :||:::|: n
+    |||||||| n
+}
+used(5)
+used(6)
+|||||||| 0

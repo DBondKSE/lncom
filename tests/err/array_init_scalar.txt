@@ -1,0 +1,3 @@
+// an array variable is initialised with an array
+::::|:|: a {5}
+|||||||| 0

@@ -1,0 +1,1 @@
+compilation error: line 2:13: the type of an array parameter is written as the array key, '@', the element type, '@' and the size
